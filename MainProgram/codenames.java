@@ -1,4 +1,4 @@
-package MainProgramFolder;
+package MainProgram;
 
 public class codenames {
     
