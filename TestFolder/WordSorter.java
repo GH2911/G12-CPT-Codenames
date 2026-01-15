@@ -3,9 +3,10 @@
 import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
+import java.io.*;
 
 public class WordSorter{
-    public static int[][] word(){
+    public static String word(){
         
         int intWord[][] = new int[400][2];
         int intRandom;
@@ -23,7 +24,7 @@ public class WordSorter{
 		int intRandTemp;
 		for(intCount2 = 0; intCount2 < 400-1; intCount2++){
 			for(intCount = 0; intCount < 400-1; intCount++){
-				if((intWord[intCount][1]) > (intWord[intCount+1][1])){
+				if((intWord[intCount][1]) < (intWord[intCount+1][1])){
 					intWordTemp = intWord[intCount][0];
 					intWord[intCount][0] = intWord[intCount+1][0];
 					intWord[intCount+1][0] = intWordTemp;
@@ -34,12 +35,32 @@ public class WordSorter{
 			}
 		}
 
+		BufferedReader words = null;
 		try{
-			BufferedReader words = new BufferedReader(new FileReader("wordlist.txt"));
+			words = new BufferedReader(new FileReader("wordlist.txt"));
 		}catch(FileNotFoundException e){
 			System.out.println("No file");
 		}
 
-        return intWord;
+		String strWord="";
+
+		try{
+			strWord = words.readLine();
+		}catch(IOException e){
+
+		}
+		//while(words.eof() != true){
+		//	String strWord;
+		//	intCount = 1;
+		//	if(intCount == intWord[intCount-1][0]){
+		//		words.readLine();
+		//	}
+		//}
+        return strWord;
     }
+	public static void main(String[] args){
+		String strWord;
+		strWord = 
+		System.out.println(word.strWord);
+}
 }
