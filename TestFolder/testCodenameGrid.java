@@ -30,9 +30,17 @@ public class testCodenameGrid extends JPanel {
                 int intx = intstartX + col * cellSize;
                 int inty = intstartY + row * cellSize;
                 g.drawRect(intx, inty, cellSize, cellSize);
+                
             }
+            int boxSize = cellSize;
+            int boxX = (intpwidth * 3 / 4) - (boxSize / 2);
+            int boxY = (intpheight * 3 / 4) - (boxSize / 2);
+
+            g.drawRect(boxX, boxY, boxSize, boxSize);
         }
     }
+
+
 
     public static void main(String[] args) {
         JFrame frame = new JFrame("Codenames Grid");
