@@ -83,7 +83,7 @@ public class testcodenames implements ActionListener {
         theFrame.setVisible(true);
     }
 
--    void startGame() {
+    void startGame() {
         mainPanel.remove(rolePanel);
         topPanel.removeAll();
         topPanel.add(new JLabel(myRole.equals("SPYMASTER") ?
