@@ -1,8 +1,9 @@
+import sockets.SuperSocketMaster;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
 
-public class testdoc implements ActionListener {
+public class codenames implements ActionListener {
 
     // Properties
     public JFrame theFrame;
@@ -19,6 +20,16 @@ public class testdoc implements ActionListener {
     public final int intROWS = 5;
     public final int intCOLS = 5;
 
+    SuperSocketMaster ssm;
+    boolean isServer;
+ 
+    String myRole = "SPECTATOR";
+    boolean redSpymasterTaken = false;
+    boolean blueSpymasterTaken = false;
+  
+    JPanel rolePanel;
+    JButton btnRedSpy, btnRedOp, btnBlueSpy, btnBlueOp, btnSpec;
+
     // Methods
     @Override
     public void actionPerformed(ActionEvent evt) {
@@ -33,7 +44,11 @@ public class testdoc implements ActionListener {
     }
 
     // Constructor
-    public testdoc(String strTitle) {
+    public codenames(String strTitle) {
+
+    isServer = true;
+    ssm = new SuperSocketMaster(1337, this);
+    ssm.connect();
 
         // Frame
         this.theFrame = new JFrame(strTitle);
@@ -135,6 +150,6 @@ public class testdoc implements ActionListener {
 
     // Main Method
     public static void main(String[] args) {
-        new testdoc("Codenames");
+        new codenames("Codenames");
     }
 }
