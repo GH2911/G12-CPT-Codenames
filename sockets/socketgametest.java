@@ -1,78 +1,39 @@
 package sockets;
-import java.awt.Dimension;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
-import javax.swing.*;
 import java.awt.*;
-import java.net.*;
+import java.awt.event.*;
+import javax.swing.*;
 
 public class socketgametest implements ActionListener {
 
     // Properties
-    JFrame theFrame = new JFrame("Sockets Chat");
+    JFrame theFrame = new JFrame("Chat");
     JPanel thePanel = new JPanel();
-    JTextField theField = new JTextField();
     JTextArea theArea = new JTextArea();
-    JScrollPane theScroll = new JScrollPane(theArea);
+    JTextField theField = new JTextField();
+    JButton butServer = new JButton("Start Server");
+    JButton butClient = new JButton("Connect as Client");
 
-    JButton butClient = new JButton("Client mode");
-    JButton butServer = new JButton("Server mode");
-
-    SuperSocketMaster ssm;
-
-    final int PORT = 12345;          // fixed port
-    final String SERVER_IP = "localhost"; // change to other person's IP
-
-    // Methods
-    public void actionPerformed(ActionEvent evt) {
-
-        if (evt.getSource() == theField) {
-            String message = theField.getText();
-            theArea.append("Me: " + message + "\n");
-            ssm.sendText(message);
-            theField.setText("");
-        }
-
-        else if (evt.getSource() == butServer) {
-            theArea.append("Starting server...\n");
-            ssm = new SuperSocketMaster(PORT, this);
-        }
-
-        else if (evt.getSource() == butClient) {
-            theArea.append("Connecting to server...\n");
-            ssm = new SuperSocketMaster(SERVER_IP, PORT, this);
-        }
-
-        else if (evt.getSource() == ssm) {
-            String incoming = ssm.readText();
-            theArea.append("Them: " + incoming + "\n");
-        }
-    }
+    SuperSocketMaster ssm = null;
 
     // Constructor
     public socketgametest() {
-
-        thePanel.setPreferredSize(new Dimension(300, 600));
         thePanel.setLayout(null);
+        thePanel.setPreferredSize(new Dimension(300, 400));
 
         theArea.setEditable(false);
+        JScrollPane scroll = new JScrollPane(theArea);
+        scroll.setBounds(0, 0, 300, 250);
+        thePanel.add(scroll);
 
-        theScroll.setSize(300, 300);
-        theScroll.setLocation(0, 0);
-        thePanel.add(theScroll);
-
-        theField.setSize(300, 50);
-        theField.setLocation(0, 300);
+        theField.setBounds(0, 250, 300, 50);
         theField.addActionListener(this);
         thePanel.add(theField);
 
-        butServer.setSize(300, 100);
-        butServer.setLocation(0, 350);
+        butServer.setBounds(0, 300, 150, 50);
         butServer.addActionListener(this);
         thePanel.add(butServer);
 
-        butClient.setSize(300, 100);
-        butClient.setLocation(0, 450);
+        butClient.setBounds(150, 300, 150, 50);
         butClient.addActionListener(this);
         thePanel.add(butClient);
 
@@ -82,8 +43,38 @@ public class socketgametest implements ActionListener {
         theFrame.setVisible(true);
     }
 
+    // Event Handling
+    public void actionPerformed(ActionEvent evt) {
+
+        // ENTER pressed → send message
+        if (evt.getSource() == theField && ssm != null) {
+            ssm.sendText(theField.getText());
+            theField.setText("");
+        }
+
+        // Start server
+        else if (evt.getSource() == butServer) {
+            ssm = new SuperSocketMaster(1337, this);
+            ssm.connect();
+            theArea.append("Server started\n");
+        }
+
+        // Connect as client
+        else if (evt.getSource() == butClient) {
+            String ip = JOptionPane.showInputDialog("Enter Server IP:");
+            ssm = new SuperSocketMaster(ip, 1337, this);
+            ssm.connect();
+            theArea.append("Connected to server\n");
+        }
+
+        // Incoming network message
+        else if (evt.getSource() == ssm) {
+            theArea.append(ssm.readText() + "\n");
+        }
+    }
+
     // Main
     public static void main(String[] args) {
-        new socketgametest();
+        new sockettest();
     }
 }
