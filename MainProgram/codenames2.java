@@ -160,7 +160,6 @@ public class codenames2 implements ActionListener {
             }
         });
 
-
         if (turnTimer != null) turnTimer.stop();
         turnTimer = t;
         timeLeft = 60;
@@ -259,5 +258,180 @@ public class codenames2 implements ActionListener {
                 startGame();
             }
         });
+
+        lobby.add(top, BorderLayout.NORTH);
+        lobby.add(new JScrollPane(lobbyList), BorderLayout.CENTER);
+        lobby.add(btnStart, BorderLayout.SOUTH);
+
+
+        lobby.setSize(450, 350);
+        lobby.setLocationRelativeTo(theFrame);
+        lobby.setVisible(true);
+    }
+
+
+    void startGame() {
+        setupBoardUI();
+        updateBoardColors();
+        startTimer();
+        gameStarted = true;
+        sendNetwork("START:" + myTeam + ":" + myRole);
+    }
+
+
+    void loadWords() {
+        wordPool.clear();
+        try {
+            Scanner sc = new Scanner(new File("wordlist.txt"));
+            while (sc.hasNextLine()) wordPool.add(sc.nextLine().trim());
+            sc.close();
+            Collections.shuffle(wordPool);
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(null, "wordlist.txt missing");
+            System.exit(0);
+        }
+    }
+
+
+    void setupBoard() {
+        int i = 0;
+        for (int r = 0; r < 5; r++)
+            for (int c = 0; c < 5; c++)
+                words[r][c] = wordPool.get(i++);
+
+
+        ArrayList<String> bag = new ArrayList<>();
+        for (int x = 0; x < 9; x++) bag.add("RED");
+        for (int x = 0; x < 8; x++) bag.add("BLUE");
+        for (int x = 0; x < 7; x++) bag.add("NEUTRAL");
+        bag.add("BLACK");
+
+
+        do {
+            Collections.shuffle(bag);
+        } while (bag.indexOf("BLACK") < 6);
+
+
+        i = 0;
+        for (int r = 0; r < 5; r++)
+            for (int c = 0; c < 5; c++)
+                colors[r][c] = bag.get(i++);
+    }
+
+
+    void setupGUI() {
+        theFrame = new JFrame("Codenames");
+        theFrame.setLayout(new BorderLayout());
+
+
+        mainPanel = new JPanel(new BorderLayout());
+        theFrame.setContentPane(mainPanel);
+
+
+        topPanel = new JPanel(new GridLayout(3, 1));
+        lblTurn = new JLabel("RED team's turn", SwingConstants.CENTER);
+        lblClue = new JLabel("Waiting for clue...", SwingConstants.CENTER);
+        lblTimer = new JLabel("Time left: 60", SwingConstants.CENTER);
+        topPanel.add(lblTurn);
+        topPanel.add(lblClue);
+        topPanel.add(lblTimer);
+        mainPanel.add(topPanel, BorderLayout.NORTH);
+
+
+        rightPanel = new JPanel(new BorderLayout());
+        gameLog = new JTextArea();
+        gameLog.setEditable(false);
+        JScrollPane logScroll = new JScrollPane(gameLog);
+        rightPanel.add(logScroll, BorderLayout.CENTER);
+
+
+        JPanel chatPanel = new JPanel(new BorderLayout());
+        chatInput = new JTextField();
+        btnSendChat = new JButton("Send");
+        chatPanel.add(chatInput, BorderLayout.CENTER);
+        chatPanel.add(btnSendChat, BorderLayout.EAST);
+        rightPanel.add(chatPanel, BorderLayout.SOUTH);
+
+
+        btnSendChat.addActionListener(e -> sendChat());
+        chatInput.addActionListener(e -> sendChat());
+
+
+        rightPanel.setPreferredSize(new Dimension(300, 0));
+        mainPanel.add(rightPanel, BorderLayout.EAST);
+
+
+        bottomPanel = new JPanel();
+        btnEndTurn = new JButton("End Turn");
+        btnEndTurn.addActionListener(this);
+        bottomPanel.add(btnEndTurn);
+
+
+        btnToggleOverlay = new JButton("Toggle Overlay");
+        btnToggleOverlay.addActionListener(this);
+        bottomPanel.add(btnToggleOverlay);
+
+
+        btnGiveClue = new JButton("Give Clue");
+        btnGiveClue.addActionListener(this);
+        bottomPanel.add(btnGiveClue);
+
+
+        mainPanel.add(bottomPanel, BorderLayout.SOUTH);
+
+
+        theFrame.setSize(1280, 720);
+        theFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        theFrame.setLocationRelativeTo(null);
+        theFrame.setVisible(true);
+
+
+        setupLobby();
+    }
+
+
+    void setupBoardUI() {
+        if (boardPanel != null) mainPanel.remove(boardPanel);
+
+
+        boardPanel = new JPanel(new GridLayout(5, 5, 15, 15));
+        boardPanel.setBackground(new Color(139, 90, 43));
+
+
+        wordButtons = new JButton[5][5];
+        for (int r = 0; r < 5; r++) {
+            for (int c = 0; c < 5; c++) {
+                JButton b = new JButton(words[r][c]);
+                b.setFont(new Font("Arial", Font.BOLD, 16));
+                b.setFocusPainted(false);
+                b.addActionListener(this);
+                addHoverEffect(b);
+                wordButtons[r][c] = b;
+                boardPanel.add(b);
+            }
+        }
+
+
+        mainPanel.add(boardPanel, BorderLayout.CENTER);
+        mainPanel.revalidate();
+        mainPanel.repaint();
+    }
+
+
+    void addHoverEffect(JButton b) {
+        b.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseEntered(MouseEvent e) {
+                b.setBorder(BorderFactory.createLineBorder(Color.BLACK, 2));
+            }
+
+
+            @Override
+            public void mouseExited(MouseEvent e) {
+                b.setBorder(UIManager.getBorder("Button.border"));
+            }
+        });
+    }
+
 
 
