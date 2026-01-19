@@ -1,8 +1,5 @@
 //Get a randomizer like with the poker game, and get 25 random words for the wordlist
 
-import java.io.BufferedReader;
-import java.io.FileNotFoundException;
-import java.io.FileReader;
 import java.io.*;
 
 public class WordSorter{
@@ -11,10 +8,11 @@ public class WordSorter{
         int intWord[][] = new int[400][2];
         int intRandom;
         int intCount;
+		Boolean blnTF = false;
 
-        for(intCount = 1; intCount <= 400; intCount++){
+        for(intCount = 0; intCount < 400; intCount++){
 			intWord[intCount][0] = intCount;
-			intRandom = (int)(Math.random() * 100 + 1);
+			intRandom = (int)(Math.random() * 400 + 1);
 			intWord[intCount][1] = intRandom;
 		}
 
@@ -24,43 +22,57 @@ public class WordSorter{
 		int intRandTemp;
 		for(intCount2 = 0; intCount2 < 400-1; intCount2++){
 			for(intCount = 0; intCount < 400-1; intCount++){
-				if((intWord[intCount][1]) < (intWord[intCount+1][1])){
+				if((intWord[intCount][1]) > (intWord[intCount+1][1])){
 					intWordTemp = intWord[intCount][0];
 					intWord[intCount][0] = intWord[intCount+1][0];
 					intWord[intCount+1][0] = intWordTemp;
-					intRandTemp = intWord[intCount][2];
+					intRandTemp = intWord[intCount][1];
 					intWord[intCount][1] = intWord[intCount+1][1];
 					intWord[intCount+1][1] = intRandTemp;
 				}
 			}
 		}
 
-		BufferedReader words = null;
+		System.out.println(intWord[23][0]);
+
+		BufferedReader wordfile = null;
 		try{
-			words = new BufferedReader(new FileReader("wordlist.txt"));
-		}catch(FileNotFoundException e){
-			System.out.println("No file");
+            wordfile = new BufferedReader(new FileReader("wordlist.txt"));
+        }catch(FileNotFoundException e){
+            System.out.println("No file");
+        }
+		String strWord[] = new String[400];
+		for(intCount = 0; intCount<400; intCount++){
+				try{
+					strWord[intCount] = wordfile.readLine();
+				}catch(IOException e){
+					System.out.println("Error");
+				}
 		}
 
-		String strWord="";
-
-		try{
-			strWord = words.readLine();
-		}catch(IOException e){
-
+		String strWordList[] = new String[25];
+		for(intCount = 0; intCount<25; intCount++){
+			strWordList[intCount] = strWord[intWord[intCount][0]];
 		}
-		//while(words.eof() != true){
-		//	String strWord;
-		//	intCount = 1;
-		//	if(intCount == intWord[intCount-1][0]){
-		//		words.readLine();
-		//	}
-		//}
-        return strWord;
+
+		for(intCount = 0; intCount<25; intCount++){
+			System.out.println(strWordList[intCount]);
+		}
+
+		//Add the words to the new game wordlist
+        PrintWriter WordList = null;
+        try{
+            WordList = new PrintWriter(new FileWriter("gamelist.txt"));
+        }catch(IOException e){
+            System.out.println("Error 2");
+        }
+
+        for(intCount=0; intCount<25; intCount++){
+            WordList.println(strWordList[intCount]);
+        }
+        WordList.close();
+
+		String strThing = "New Words Generated";
+        return strThing;
     }
-	public static void main(String[] args){
-		String strWord;
-		strWord = 
-		System.out.println(word.strWord);
-}
 }
