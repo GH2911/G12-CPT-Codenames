@@ -30,14 +30,21 @@ public class codenames implements ActionListener {
                 if (evt.getSource() == wordButtons[intRow][intCol]) {
 
                     int intBoxNumber = (intRow * intCOLS) + intCol + 1;
-                    System.out.println("Clicked box #" + intBoxNumber);
 
+                    System.out.println(
+                        "Clicked box #" + intBoxNumber +
+                        " (row " + (intRow + 1) +
+                        ", col " + (intCol + 1) + ")"
+                    );
+
+                    // fade / mark as selected
                     wordButtons[intRow][intCol].setBackground(new Color(220, 210, 180));
                     wordButtons[intRow][intCol].setEnabled(false);
                 }
             }
         }
     }
+
 
     // Constructor
     public codenames(String strTitle) {
@@ -87,7 +94,7 @@ public class codenames implements ActionListener {
         centerContainer.setLayout(new BoxLayout(centerContainer, BoxLayout.X_AXIS));
         centerContainer.setBackground(new Color(210, 180, 140));
 
-        // ---------------- LEFT (RED) PANEL ----------------
+        // left panel
         this.leftPanel = new JPanel();
         this.leftPanel.setPreferredSize(new Dimension(200, 620));
         this.leftPanel.setBackground(new Color(210, 180, 140));
@@ -130,11 +137,11 @@ public class codenames implements ActionListener {
         this.leftPanel.add(pnlRedTeam, BorderLayout.NORTH);
         centerContainer.add(this.leftPanel);
 
-        // ---------------- BOARD ----------------
+        // board
         this.boardPanel.setPreferredSize(new Dimension(880, 620));
         centerContainer.add(this.boardPanel);
 
-        // ---------------- RIGHT (BLUE) PANEL ----------------
+        // right panel
         this.rightPanel = new JPanel();
         this.rightPanel.setPreferredSize(new Dimension(200, 620));
         this.rightPanel.setBackground(new Color(210, 180, 140));
