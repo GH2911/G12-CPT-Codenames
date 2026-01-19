@@ -26,8 +26,13 @@ public class codenames implements ActionListener {
     public void actionPerformed(ActionEvent evt) {
         for (int intRow = 0; intRow < intROWS; intRow++) {
             for (int intCol = 0; intCol < intCOLS; intCol++) {
+
                 if (evt.getSource() == wordButtons[intRow][intCol]) {
-                    System.out.println("Clicked: " + wordButtons[intRow][intCol].getText());
+
+                    int intBoxNumber = (intRow * intCOLS) + intCol + 1;
+                    System.out.println("Clicked box #" + intBoxNumber);
+
+                    wordButtons[intRow][intCol].setBackground(new Color(220, 210, 180));
                     wordButtons[intRow][intCol].setEnabled(false);
                 }
             }
@@ -43,88 +48,142 @@ public class codenames implements ActionListener {
 
         // Main panel
         this.mainPanel = new JPanel(new BorderLayout());
+        this.mainPanel.setBackground(new Color(210, 180, 140));
         this.theFrame.setContentPane(this.mainPanel);
 
         // Top panel
         this.topPanel = new JPanel();
         this.topPanel.setPreferredSize(new Dimension(1280, 60));
-        this.topPanel.setBackground(new Color(220, 220, 220));
-        this.topPanel.add(new JLabel("Codenames Game"));
+        this.topPanel.setBackground(new Color(210, 180, 140));
+        this.topPanel.add(new JLabel("Give your operatives a clue."));
         this.mainPanel.add(this.topPanel, BorderLayout.NORTH);
 
         // Bottom panel
         this.bottomPanel = new JPanel();
         this.bottomPanel.setPreferredSize(new Dimension(1280, 40));
-        this.bottomPanel.setBackground(new Color(220, 220, 220));
-        this.bottomPanel.add(new JLabel(""));
+        this.bottomPanel.setBackground(new Color(210, 180, 140));
         this.mainPanel.add(this.bottomPanel, BorderLayout.SOUTH);
 
-        // BOARD PANEL (5x5 grid)
-        this.boardPanel = new JPanel();
-        this.boardPanel.setLayout(new GridLayout(intROWS, intCOLS, 15, 15));
-        this.boardPanel.setBackground(new Color(150, 70, 30));
+        // Board panel
+        this.boardPanel = new JPanel(new GridLayout(intROWS, intCOLS, 15, 15));
+        this.boardPanel.setBackground(new Color(139, 90, 43));
 
         this.wordButtons = new JButton[intROWS][intCOLS];
         for (int intRow = 0; intRow < intROWS; intRow++) {
             for (int intCol = 0; intCol < intCOLS; intCol++) {
+
                 this.wordButtons[intRow][intCol] = new JButton("WORD");
                 this.wordButtons[intRow][intCol].setFont(new Font("Arial", Font.BOLD, 18));
-                this.wordButtons[intRow][intCol].setBackground(new Color(195, 176, 145));
+                this.wordButtons[intRow][intCol].setBackground(new Color(245, 235, 200));
+                this.wordButtons[intRow][intCol].setFocusPainted(false);
                 this.wordButtons[intRow][intCol].addActionListener(this);
+
                 this.boardPanel.add(this.wordButtons[intRow][intCol]);
             }
         }
 
-        // CENTER CONTAINER (horizontal box for left panel, board, right panel)
+        // Center container
         JPanel centerContainer = new JPanel();
         centerContainer.setLayout(new BoxLayout(centerContainer, BoxLayout.X_AXIS));
+        centerContainer.setBackground(new Color(210, 180, 140));
 
-        // LEFT PANEL (nested vertical: RED TEAM top, empty bottom)
+        // ---------------- LEFT (RED) PANEL ----------------
         this.leftPanel = new JPanel();
-        this.leftPanel.setLayout(new BoxLayout(this.leftPanel, BoxLayout.Y_AXIS));
-        this.leftPanel.setPreferredSize(new Dimension(180, 620));
+        this.leftPanel.setPreferredSize(new Dimension(200, 620));
+        this.leftPanel.setBackground(new Color(210, 180, 140));
+        this.leftPanel.setLayout(new BorderLayout());
 
-        JPanel pnlRedTeam = new JPanel();
-        pnlRedTeam.setBackground(new Color(255, 200, 200));
-        pnlRedTeam.setMaximumSize(new Dimension(180, 310));
-        pnlRedTeam.setMinimumSize(new Dimension(180, 310));
-        pnlRedTeam.add(new JLabel("RED TEAM"));
-        this.leftPanel.add(pnlRedTeam);
+        JPanel pnlRedTeam = new JPanel(new BorderLayout());
+        pnlRedTeam.setBackground(new Color(170, 60, 50));
+        pnlRedTeam.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
 
-        JPanel pnlEmptyLeft = new JPanel();
-        pnlEmptyLeft.setBackground(new Color(255, 200, 200));
-        pnlEmptyLeft.setMaximumSize(new Dimension(180, 310));
-        pnlEmptyLeft.setMinimumSize(new Dimension(180, 310));
-        this.leftPanel.add(pnlEmptyLeft);
+        JLabel lblRedCount = new JLabel("9");
+        lblRedCount.setFont(new Font("Arial", Font.BOLD, 48));
+        lblRedCount.setForeground(Color.WHITE);
+        lblRedCount.setHorizontalAlignment(SwingConstants.RIGHT);
 
+        JPanel pnlRedText = new JPanel();
+        pnlRedText.setBackground(new Color(170, 60, 50));
+        pnlRedText.setLayout(new BoxLayout(pnlRedText, BoxLayout.Y_AXIS));
+
+        JLabel lblRedOperatives = new JLabel("Operative(s)");
+        lblRedOperatives.setForeground(Color.WHITE);
+
+        JLabel lblRedOpName = new JLabel("-");
+        lblRedOpName.setForeground(Color.WHITE);
+
+        JLabel lblRedSpymaster = new JLabel("Spymaster(s)");
+        lblRedSpymaster.setForeground(Color.WHITE);
+
+        JLabel lblRedSpyName = new JLabel("-");
+        lblRedSpyName.setForeground(Color.WHITE);
+
+        pnlRedText.add(lblRedOperatives);
+        pnlRedText.add(lblRedOpName);
+        pnlRedText.add(Box.createVerticalStrut(10));
+        pnlRedText.add(lblRedSpymaster);
+        pnlRedText.add(lblRedSpyName);
+
+        pnlRedTeam.add(pnlRedText, BorderLayout.WEST);
+        pnlRedTeam.add(lblRedCount, BorderLayout.EAST);
+
+        this.leftPanel.add(pnlRedTeam, BorderLayout.NORTH);
         centerContainer.add(this.leftPanel);
 
-        // BOARD PANEL in center
-        this.boardPanel.setPreferredSize(new Dimension(920, 620));
+        // ---------------- BOARD ----------------
+        this.boardPanel.setPreferredSize(new Dimension(880, 620));
         centerContainer.add(this.boardPanel);
 
-        // RIGHT PANEL (nested vertical: BLUE TEAM top, game log bottom)
+        // ---------------- RIGHT (BLUE) PANEL ----------------
         this.rightPanel = new JPanel();
-        this.rightPanel.setLayout(new BoxLayout(this.rightPanel, BoxLayout.Y_AXIS));
-        this.rightPanel.setPreferredSize(new Dimension(180, 620));
+        this.rightPanel.setPreferredSize(new Dimension(200, 620));
+        this.rightPanel.setBackground(new Color(210, 180, 140));
+        this.rightPanel.setLayout(new BorderLayout());
 
-        JPanel pnlBlueTeam = new JPanel();
-        pnlBlueTeam.setBackground(new Color(200, 200, 255));
-        pnlBlueTeam.setMaximumSize(new Dimension(180, 310));
-        pnlBlueTeam.setMinimumSize(new Dimension(180, 310));
-        pnlBlueTeam.add(new JLabel("BLUE TEAM"));
-        this.rightPanel.add(pnlBlueTeam);
+        JPanel pnlBlueTeam = new JPanel(new BorderLayout());
+        pnlBlueTeam.setBackground(new Color(60, 130, 160));
+        pnlBlueTeam.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
+
+        JLabel lblBlueCount = new JLabel("8");
+        lblBlueCount.setFont(new Font("Arial", Font.BOLD, 48));
+        lblBlueCount.setForeground(Color.WHITE);
+        lblBlueCount.setHorizontalAlignment(SwingConstants.LEFT);
+
+        JPanel pnlBlueText = new JPanel();
+        pnlBlueText.setBackground(new Color(60, 130, 160));
+        pnlBlueText.setLayout(new BoxLayout(pnlBlueText, BoxLayout.Y_AXIS));
+
+        JLabel lblBlueOperatives = new JLabel("Operative(s)");
+        lblBlueOperatives.setForeground(Color.WHITE);
+
+        JLabel lblBlueOpName = new JLabel("-");
+        lblBlueOpName.setForeground(Color.WHITE);
+
+        JLabel lblBlueSpymaster = new JLabel("Spymaster(s)");
+        lblBlueSpymaster.setForeground(Color.WHITE);
+
+        JLabel lblBlueSpyName = new JLabel("-");
+        lblBlueSpyName.setForeground(Color.WHITE);
+
+        pnlBlueText.add(lblBlueOperatives);
+        pnlBlueText.add(lblBlueOpName);
+        pnlBlueText.add(Box.createVerticalStrut(10));
+        pnlBlueText.add(lblBlueSpymaster);
+        pnlBlueText.add(lblBlueSpyName);
+
+        pnlBlueTeam.add(lblBlueCount, BorderLayout.WEST);
+        pnlBlueTeam.add(pnlBlueText, BorderLayout.EAST);
+
+        this.rightPanel.add(pnlBlueTeam, BorderLayout.NORTH);
 
         JPanel pnlGameLog = new JPanel();
-        pnlGameLog.setBackground(Color.WHITE);
-        pnlGameLog.setBorder(BorderFactory.createLineBorder(Color.BLACK));
-        pnlGameLog.setMaximumSize(new Dimension(180, 310));
-        pnlGameLog.setMinimumSize(new Dimension(180, 310));
-        this.rightPanel.add(pnlGameLog);
+        pnlGameLog.setBackground(new Color(230, 210, 200));
+        pnlGameLog.setBorder(BorderFactory.createTitledBorder("Game log"));
+
+        this.rightPanel.add(pnlGameLog, BorderLayout.CENTER);
 
         centerContainer.add(this.rightPanel);
 
-        // Add center container to main panel
         this.mainPanel.add(centerContainer, BorderLayout.CENTER);
 
         // Frame settings
