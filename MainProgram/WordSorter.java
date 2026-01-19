@@ -1,3 +1,4 @@
+package MainProgram;
 //Get a randomizer like with the poker game, and get 25 random words for the wordlist
 
 import java.io.*;
@@ -8,7 +9,6 @@ public class WordSorter{
         int intWord[][] = new int[400][2];
         int intRandom;
         int intCount;
-		Boolean blnTF = false;
 
         for(intCount = 0; intCount < 400; intCount++){
 			intWord[intCount][0] = intCount;
