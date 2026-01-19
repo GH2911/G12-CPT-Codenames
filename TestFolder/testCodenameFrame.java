@@ -12,7 +12,7 @@ public class testCodenameFrame{
         theFrame = new JFrame("Test Frame");
         thePanel = new JPanel();
         thePanel.setLayout(null);
-        thePanel.setPreferredSize(new Dimension(1400, 850));
+        thePanel.setPreferredSize(new Dimension(1280, 720));
 
         theFrame.setContentPane(thePanel);
         theFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
