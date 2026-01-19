@@ -434,4 +434,167 @@ public class codenames2 implements ActionListener {
     }
 
 
+        
+    void updateBoardColors() {
+        for (int r = 0; r < 5; r++)
+            for (int c = 0; c < 5; c++) {
+                if (revealed[r][c]) revealColor(r, c);
+                else if (myRole.equals("SPYMASTER") && overlayOn) {
+                    revealColor(r, c, wordButtons[r][c]);
+                } else {
+                    wordButtons[r][c].setBackground(new Color(245, 235, 200));
+                }
+            }
+    }
+
+
+    void revealColor(int r, int c) {
+        revealColor(r, c, wordButtons[r][c]);
+    }
+
+
+    void revealColor(int r, int c, JButton b) {
+        switch (colors[r][c]) {
+            case "RED":
+                b.setBackground(new Color(170, 60, 50));
+                break;
+            case "BLUE":
+                b.setBackground(new Color(60, 130, 160));
+                break;
+            case "BLACK":
+                b.setBackground(Color.BLACK);
+                break;
+            default:
+                b.setBackground(new Color(200, 190, 170));
+        }
+    }
+
+
+    // --------- NETWORK ----------
+    void setupSocket() {
+        if (isServer) {
+            ssm = new SuperSocketMaster(1337, evt -> handleNetwork());
+            log("Server started on port 1337");
+        } else {
+            ssm = new SuperSocketMaster(serverIP, 1337, evt -> handleNetwork());
+            if (ssm.connect()) {
+                log("Connected to server: " + serverIP);
+            } else {
+                log("Failed to connect to server");
+            }
+        }
+    }
+
+
+    void sendBoardToClient() {
+        // board format: word1,word2,...,word25|color1,color2,...,color25
+        StringBuilder w = new StringBuilder();
+        StringBuilder c = new StringBuilder();
+
+
+        for (int r = 0; r < 5; r++) {
+            for (int col = 0; col < 5; col++) {
+                w.append(words[r][col]).append(",");
+                c.append(colors[r][col]).append(",");
+            }
+        }
+        sendNetwork("BOARD:" + w.toString() + "|" + c.toString());
+    }
+
+
+    void handleNetwork() {
+        String msg = ssm.readText();
+        if (msg == null) return;
+
+
+        log("Network: " + msg);
+
+
+        if (msg.startsWith("BOARD:")) {
+            String[] parts = msg.substring(6).split("\\|");
+            String[] w = parts[0].split(",");
+            String[] c = parts[1].split(",");
+
+
+            int idx = 0;
+            for (int r = 0; r < 5; r++) {
+                for (int col = 0; col < 5; col++) {
+                    words[r][col] = w[idx];
+                    colors[r][col] = c[idx];
+                    idx++;
+                }
+            }
+            setupBoardUI();
+            updateBoardColors();
+            gameStarted = true;
+        }
+
+
+        if (msg.startsWith("CLICK:")) {
+            String[] p = msg.split(":");
+            int r = Integer.parseInt(p[1]);
+            int c = Integer.parseInt(p[2]);
+            if (!revealed[r][c]) {
+                revealed[r][c] = true;
+                revealColor(r, c);
+                wordButtons[r][c].setEnabled(false);
+            }
+        }
+
+
+        if (msg.startsWith("ENDTURN:")) {
+            currentTurn = msg.split(":")[1];
+            lblTurn.setText(currentTurn + " team's turn");
+            lblClue.setText("Waiting for clue...");
+            timeLeft = 60;
+        }
+
+
+        if (msg.startsWith("CLUE:")) {
+            lblClue.setText("Clue: " + msg.substring(5));
+        }
+
+
+        if (msg.startsWith("CHAT:")) {
+            log("Opponent: " + msg.substring(5));
+        }
+
+
+        if (msg.startsWith("START:")) {
+            // client receives team/role
+            String[] parts = msg.split(":");
+            myTeam = parts[1];
+            myRole = parts[2];
+            log("Assigned: " + myTeam + " " + myRole);
+        }
+    }
+
+
+    void sendNetwork(String msg) {
+        if (ssm != null) ssm.sendText(msg);
+    }
+
+
+    void log(String msg) {
+        if (gameLog != null) {
+            gameLog.append(msg + "\n");
+        }
+    }
+
+
+    void sendChat() {
+        String text = chatInput.getText().trim();
+        if (text.isEmpty()) return;
+        log("You: " + text);
+        sendNetwork("CHAT:" + text);
+        chatInput.setText("");
+    }
+
+
+    public static void main(String[] args) {
+        SwingUtilities.invokeLater(() -> new codenames2("Codenames"));
+    }
+}
+
+
 
