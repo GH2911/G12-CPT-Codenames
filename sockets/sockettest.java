@@ -1,4 +1,4 @@
-package Sockets;
+package sockets;
 
 import java.awt.Dimension;
 import java.awt.event.ActionEvent;
