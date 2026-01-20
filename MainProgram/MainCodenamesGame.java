@@ -7,94 +7,94 @@ import java.io.*;
 import java.util.*;
 import sockets.SuperSocketMaster;
 
-public class testcodenames3 implements ActionListener {
+public class MainCodenamesGame implements ActionListener {
 
     // Properties
     JFrame theFrame;
     JPanel mainPanel, boardPanel, leftPanel, rightPanel, bottomPanel;
-    JButton[][] wordButtons;
+    JButton[][] btnWord;
     JButton btnEndTurn, btnToggleOverlay, btnGiveClue;
-    JTextField chatInput;
-    JTextArea gameLog;
+    JTextField txtChatInput;
+    JTextArea txtGameLog;
 
-    final int intROWS = 5;
-    final int intCOLS = 5;
+    final int intRows = 5;
+    final int intCols = 5;
 
-    String[][] words = new String[5][5];
-    String[][] colors = new String[5][5];
-    boolean[][] revealed = new boolean[5][5];
+    String[][] strWords = new String[5][5];
+    String[][] strColors = new String[5][5];
+    boolean[][] blnRevealed = new boolean[5][5];
 
-    String myRole = "OPERATIVE";
-    String myTeam = "RED";
-    String currentTurn = "RED";
+    String strMyRole = "OPERATIVE";
+    String strMyTeam = "RED";
+    String strCurrentTurn = "RED";
 
-    int redLeft = 9;
-    int blueLeft = 8;
+    int intRedLeft = 9;
+    int intBlueLeft = 8;
 
     // GUI Labels
     JLabel lblTurnBox;
     JLabel lblHint;
-    JLabel lblHintNumber; // NEW: number box
+    JLabel lblHintNumber;
     JLabel lblRedCount;
     JLabel lblBlueCount;
     JLabel lblTimer;
 
-    ArrayList<String> wordPool = new ArrayList<>();
+    ArrayList<String> arrWordPool = new ArrayList<>();
 
     // Online
     SuperSocketMaster ssm;
-    boolean isServer = false;
-    String serverIP = "";
-    JTextField chatField;
+    boolean blnIsServer = false;
+    String strServerIP = "";
+    JTextField txtChatField;
 
     // Overlay
-    boolean overlayOn = true;
+    boolean blnOverlayOn = true;
 
     // Timer
     javax.swing.Timer turnTimer;
-    int timeLeft = 60;
+    int intTimeLeft = 60;
 
-    boolean gameStarted = false;
+    boolean blnGameStarted = false;
 
     // ANIMATION TRACKING
 
-    Color[][] targetColors = new Color[5][5]; 
-    Color[][] currentColors = new Color[5][5]; 
+    Color[][] colTarget = new Color[5][5]; 
+    Color[][] colCurrent = new Color[5][5]; 
 
-    int displayedRed = redLeft;  
-    int displayedBlue = blueLeft; 
+    int intDisplayedRed = intRedLeft;  
+    int intDisplayedBlue = intBlueLeft; 
 
     javax.swing.Timer animationTimer; // 60 FPS animation
 
-    final int FPS = 60; // 60 frames per second
-    final int ANIM_DURATION = 300; // duration in ms for color transitions
-    final float COLOR_STEP = 1.0f / ((ANIM_DURATION / 1000f) * FPS); // fraction per frame
+    final int intFPS = 60; // 60 frames per second
+    final int intAnimDuration = 300; // duration in ms for color transitions
+    final float fltColorStep = 1.0f / ((intAnimDuration / 1000f) * intFPS); // fraction per frame
 
     // ======================
     // HELPER METHODS (LABELS)
     // ======================
-    String actorLabel() {
-        return myTeam + " " + (myRole.equals("SPYMASTER") ? "Spymaster" : "Operative");
+    String getActorLabel() {
+        return strMyTeam + " " + (strMyRole.equals("SPYMASTER") ? "Spymaster" : "Operative");
     }
 
-    String operativeLabel() {
-        return currentTurn + " Operative";
+    String getOperativeLabel() {
+        return strCurrentTurn + " Operative";
     }
 
-    String spymasterLabel() {
-        return currentTurn + " Spymaster";
+    String getSpymasterLabel() {
+        return strCurrentTurn + " Spymaster";
     }
 
     @Override
     public void actionPerformed(ActionEvent evt) {
 
         if (evt.getSource() == btnToggleOverlay) {
-            overlayOn = !overlayOn;
+            blnOverlayOn = !blnOverlayOn;
             updateTargetColors();
             return;
         }
 
-        if (!gameStarted) return;
+        if (!blnGameStarted) return;
 
         if (evt.getSource() == btnEndTurn) {
             endTurn();
@@ -102,7 +102,7 @@ public class testcodenames3 implements ActionListener {
         }
 
         if (evt.getSource() == btnGiveClue) {
-            if (myRole.equals("SPYMASTER") && myTeam.equals(currentTurn)) {
+            if (strMyRole.equals("SPYMASTER") && strMyTeam.equals(strCurrentTurn)) {
                 giveClue();
             } else {
                 JOptionPane.showMessageDialog(theFrame, "Only the spymaster of the current team can give clues.");
@@ -110,42 +110,42 @@ public class testcodenames3 implements ActionListener {
             return;
         }
 
-        if (!myRole.equals("OPERATIVE") || !myTeam.equals(currentTurn)) return;
+        if (!strMyRole.equals("OPERATIVE") || !strMyTeam.equals(strCurrentTurn)) return;
 
-        for (int r = 0; r < 5; r++) {
-            for (int c = 0; c < 5; c++) {
-                if (evt.getSource() == wordButtons[r][c] && !revealed[r][c]) {
-                    revealed[r][c] = true;
+        for (int intRow = 0; intRow < 5; intRow++) {
+            for (int intCol = 0; intCol < 5; intCol++) {
+                if (evt.getSource() == btnWord[intRow][intCol] && !blnRevealed[intRow][intCol]) {
+                    blnRevealed[intRow][intCol] = true;
 
                     // Set target color for animation
                     updateTargetColors();
 
-                    wordButtons[r][c].setEnabled(false);
-                    sendNetwork("CLICK:" + r + ":" + c);
+                    btnWord[intRow][intCol].setEnabled(false);
+                    sendNetwork("CLICK:" + intRow + ":" + intCol);
 
                     // LOG LOCAL CLICK
-                    log(actorLabel() + " taps " + words[r][c]);
+                    log(getActorLabel() + " taps " + strWords[intRow][intCol]);
 
-                    if (colors[r][c].equals("BLACK")) {
-                        log("ASSASSIN! " + (currentTurn.equals("RED") ? "BLUE" : "RED") + " wins!");
+                    if (strColors[intRow][intCol].equals("BLACK")) {
+                        log("ASSASSIN! " + (strCurrentTurn.equals("RED") ? "BLUE" : "RED") + " wins!");
                         JOptionPane.showMessageDialog(theFrame,
-                                "ASSASSIN! " + (currentTurn.equals("RED") ? "BLUE" : "RED") + " wins!");
+                                "ASSASSIN! " + (strCurrentTurn.equals("RED") ? "BLUE" : "RED") + " wins!");
                         System.exit(0);
                     }
-                    if (colors[r][c].equals("RED")) redLeft--;
-                    if (colors[r][c].equals("BLUE")) blueLeft--;
+                    if (strColors[intRow][intCol].equals("RED")) intRedLeft--;
+                    if (strColors[intRow][intCol].equals("BLUE")) intBlueLeft--;
 
                     // Animate score update
                     animateScores();
 
-                    if (redLeft == 0 || blueLeft == 0) {
-                        log((redLeft == 0 ? "RED" : "BLUE") + " TEAM WINS!");
+                    if (intRedLeft == 0 || intBlueLeft == 0) {
+                        log((intRedLeft == 0 ? "RED" : "BLUE") + " TEAM WINS!");
                         JOptionPane.showMessageDialog(theFrame,
-                                (redLeft == 0 ? "RED" : "BLUE") + " TEAM WINS!");
+                                (intRedLeft == 0 ? "RED" : "BLUE") + " TEAM WINS!");
                         System.exit(0);
                     }
 
-                    if (!colors[r][c].equals(currentTurn)) {
+                    if (!strColors[intRow][intCol].equals(strCurrentTurn)) {
                         endTurn();
                     }
                 }
@@ -153,7 +153,7 @@ public class testcodenames3 implements ActionListener {
         }
     }
 
-    public testcodenames3(String title) {
+    public MainCodenamesGame(String strTitle) {
         setupGUI();
         setupAnimationTimer(); // start animation timer for buttons and scores
     }
@@ -161,18 +161,18 @@ public class testcodenames3 implements ActionListener {
     void startTimer() {
         if (lblTimer == null) return;
 
-        javax.swing.Timer t = new javax.swing.Timer(1000, e -> {
-            timeLeft--;
-            lblTimer.setText("Time left: " + timeLeft);
-            if (timeLeft <= 0) {
+        javax.swing.Timer timer = new javax.swing.Timer(1000, e -> {
+            intTimeLeft--;
+            lblTimer.setText("Time left: " + intTimeLeft);
+            if (intTimeLeft <= 0) {
                 ((javax.swing.Timer) e.getSource()).stop();
                 endTurn();
             }
         });
         if (turnTimer != null) turnTimer.stop();
-        turnTimer = t;
-        timeLeft = 60;
-        lblTimer.setText("Time left: " + timeLeft);
+        turnTimer = timer;
+        intTimeLeft = 60;
+        lblTimer.setText("Time left: " + intTimeLeft);
         turnTimer.start();
     }
 
@@ -180,17 +180,17 @@ public class testcodenames3 implements ActionListener {
     // END TURN
     // ======================
     void endTurn() {
-        log(operativeLabel() + " ends guessing");
+        log(getOperativeLabel() + " ends guessing");
 
-        currentTurn = currentTurn.equals("RED") ? "BLUE" : "RED";
-        lblTurnBox.setText(currentTurn + "'s turn");
+        strCurrentTurn = strCurrentTurn.equals("RED") ? "BLUE" : "RED";
+        lblTurnBox.setText(strCurrentTurn + "'s turn");
         lblHint.setText("Waiting for clue...");
         lblHintNumber.setText("");
-        timeLeft = 60;
+        intTimeLeft = 60;
 
-        sendNetwork("ENDTURN:" + currentTurn);
+        sendNetwork("ENDTURN:" + strCurrentTurn);
 
-        log(currentTurn + " team's turn begins");
+        log(strCurrentTurn + " team's turn begins");
 
         updateTargetColors();
     }
@@ -199,20 +199,20 @@ public class testcodenames3 implements ActionListener {
     // GIVE CLUE
     // ======================
     void giveClue() {
-        String clue = JOptionPane.showInputDialog("Enter clue + number (e.g. Animal 2)");
-        if (clue != null && !clue.isEmpty()) {
-            String word = clue;
-            String number = "";
-            if (clue.contains(" ")) {
-                int idx = clue.lastIndexOf(" ");
-                word = clue.substring(0, idx).trim();
-                number = clue.substring(idx + 1).trim();
+        String strClue = JOptionPane.showInputDialog("Enter clue + number (e.g. Animal 2)");
+        if (strClue != null && !strClue.isEmpty()) {
+            String strWord = strClue;
+            String strNumber = "";
+            if (strClue.contains(" ")) {
+                int intIdx = strClue.lastIndexOf(" ");
+                strWord = strClue.substring(0, intIdx).trim();
+                strNumber = strClue.substring(intIdx + 1).trim();
             }
 
             // ===== NEW VALIDATION =====
-            for (int r = 0; r < 5; r++) {
-                for (int c = 0; c < 5; c++) {
-                    if (words[r][c].equalsIgnoreCase(word)) {
+            for (int intRow = 0; intRow < 5; intRow++) {
+                for (int intCol = 0; intCol < 5; intCol++) {
+                    if (strWords[intRow][intCol].equalsIgnoreCase(strWord)) {
                         JOptionPane.showMessageDialog(theFrame,
                                 "Invalid clue! You cannot use a word that is already on the board.");
                         return;
@@ -221,23 +221,23 @@ public class testcodenames3 implements ActionListener {
             }
             // ===== END VALIDATION =====
 
-            lblHint.setText(word);
-            lblHintNumber.setText(number);
+            lblHint.setText(strWord);
+            lblHintNumber.setText(strNumber);
 
-            sendNetwork("CLUE:" + word + ":" + number);
+            sendNetwork("CLUE:" + strWord + ":" + strNumber);
 
-            log(spymasterLabel() + " gives clue " + word + " " + number);
+            log(getSpymasterLabel() + " gives clue " + strWord + " " + strNumber);
         }
     }
 
     void setupLobby() {
-        JDialog lobby = new JDialog(theFrame, "Lobby", true);
-        lobby.setLayout(new BorderLayout());
+        JDialog dlgLobby = new JDialog(theFrame, "Lobby", true);
+        dlgLobby.setLayout(new BorderLayout());
 
-        JPanel top = new JPanel();
-        top.add(new JLabel("Lobby - Choose role & team"));
+        JPanel pnlTop = new JPanel();
+        pnlTop.add(new JLabel("Lobby - Choose role & team"));
 
-        JPanel hostPanel = new JPanel();
+        JPanel pnlHost = new JPanel();
         JRadioButton rbHost = new JRadioButton("Host");
         JRadioButton rbJoin = new JRadioButton("Join");
         ButtonGroup bg = new ButtonGroup();
@@ -245,18 +245,18 @@ public class testcodenames3 implements ActionListener {
         bg.add(rbJoin);
         rbHost.setSelected(true);
 
-        JTextField ipInput = new JTextField("127.0.0.1", 10);
+        JTextField txtIPInput = new JTextField("127.0.0.1", 10);
 
-        hostPanel.add(rbHost);
-        hostPanel.add(rbJoin);
-        hostPanel.add(new JLabel("IP:"));
-        hostPanel.add(ipInput);
+        pnlHost.add(rbHost);
+        pnlHost.add(rbJoin);
+        pnlHost.add(new JLabel("IP:"));
+        pnlHost.add(txtIPInput);
 
-        top.add(hostPanel);
+        pnlTop.add(pnlHost);
 
         DefaultListModel<String> listModel = new DefaultListModel<>();
-        JList<String> lobbyList = new JList<>(listModel);
-        lobbyList.setPreferredSize(new Dimension(250, 200));
+        JList<String> lstLobby = new JList<>(listModel);
+        lstLobby.setPreferredSize(new Dimension(250, 200));
 
         listModel.addElement("Red Operative");
         listModel.addElement("Red Spymaster");
@@ -265,55 +265,55 @@ public class testcodenames3 implements ActionListener {
 
         JButton btnStart = new JButton("Start Game");
         btnStart.addActionListener(e -> {
-            if (lobbyList.getSelectedValue() == null) return;
+            if (lstLobby.getSelectedValue() == null) return;
 
-            isServer = rbHost.isSelected();
-            serverIP = ipInput.getText().trim();
+            blnIsServer = rbHost.isSelected();
+            strServerIP = txtIPInput.getText().trim();
 
-            String sel = lobbyList.getSelectedValue();
-            myTeam = sel.contains("Red") ? "RED" : "BLUE";
-            myRole = sel.contains("Spymaster") ? "SPYMASTER" : "OPERATIVE";
+            String strSel = lstLobby.getSelectedValue();
+            strMyTeam = strSel.contains("Red") ? "RED" : "BLUE";
+            strMyRole = strSel.contains("Spymaster") ? "SPYMASTER" : "OPERATIVE";
 
-            lobby.dispose();
+            dlgLobby.dispose();
 
             setupSocket();
 
-            if (isServer) {
+            if (blnIsServer) {
                 loadWords();
                 setupBoard();
                 sendBoardToClient();
                 startGame();
             }
 
-            if (myRole.equals("SPYMASTER")) {
+            if (strMyRole.equals("SPYMASTER")) {
                 updateTargetColors();
             }
         });
 
-        lobby.add(top, BorderLayout.NORTH);
-        lobby.add(new JScrollPane(lobbyList), BorderLayout.CENTER);
-        lobby.add(btnStart, BorderLayout.SOUTH);
+        dlgLobby.add(pnlTop, BorderLayout.NORTH);
+        dlgLobby.add(new JScrollPane(lstLobby), BorderLayout.CENTER);
+        dlgLobby.add(btnStart, BorderLayout.SOUTH);
 
-        lobby.setSize(450, 350);
-        lobby.setLocationRelativeTo(theFrame);
-        lobby.setVisible(true);
+        dlgLobby.setSize(450, 350);
+        dlgLobby.setLocationRelativeTo(theFrame);
+        dlgLobby.setVisible(true);
     }
 
     void startGame() {
         setupBoardUI();
         updateTargetColors();
         startTimer();
-        gameStarted = true;
-        sendNetwork("START:" + myTeam + ":" + myRole);
+        blnGameStarted = true;
+        sendNetwork("START:" + strMyTeam + ":" + strMyRole);
     }
 
     void loadWords() {
-        wordPool.clear();
+        arrWordPool.clear();
         try {
             Scanner sc = new Scanner(new File("wordlist.txt"));
-            while (sc.hasNextLine()) wordPool.add(sc.nextLine().trim());
+            while (sc.hasNextLine()) arrWordPool.add(sc.nextLine().trim());
             sc.close();
-            Collections.shuffle(wordPool);
+            Collections.shuffle(arrWordPool);
         } catch (Exception e) {
             JOptionPane.showMessageDialog(null, "wordlist.txt missing");
             System.exit(0);
@@ -321,25 +321,25 @@ public class testcodenames3 implements ActionListener {
     }
 
     void setupBoard() {
-        int i = 0;
-        for (int r = 0; r < 5; r++)
-            for (int c = 0; c < 5; c++)
-                words[r][c] = wordPool.get(i++);
+        int intIdx = 0;
+        for (int intRow = 0; intRow < 5; intRow++)
+            for (int intCol = 0; intCol < 5; intCol++)
+                strWords[intRow][intCol] = arrWordPool.get(intIdx++);
 
-        ArrayList<String> bag = new ArrayList<>();
-        for (int x = 0; x < 9; x++) bag.add("RED");
-        for (int x = 0; x < 8; x++) bag.add("BLUE");
-        for (int x = 0; x < 7; x++) bag.add("NEUTRAL");
-        bag.add("BLACK");
+        ArrayList<String> arrBag = new ArrayList<>();
+        for (int intCount = 0; intCount < 9; intCount++) arrBag.add("RED");
+        for (int intCount2 = 0; intCount2 < 8; intCount2++) arrBag.add("BLUE");
+        for (int intCount3 = 0; intCount3 < 7; intCount3++) arrBag.add("NEUTRAL");
+        arrBag.add("BLACK");
 
         do {
-            Collections.shuffle(bag);
-        } while (bag.indexOf("BLACK") < 6);
+            Collections.shuffle(arrBag);
+        } while (arrBag.indexOf("BLACK") < 6);
 
-        i = 0;
-        for (int r = 0; r < 5; r++)
-            for (int c = 0; c < 5; c++)
-                colors[r][c] = bag.get(i++);
+        intIdx = 0;
+        for (int intRow = 0; intRow < 5; intRow++)
+            for (int intCol = 0; intCol < 5; intCol++)
+                strColors[intRow][intCol] = arrBag.get(intIdx++);
     }
 
     void setupGUI() {
@@ -359,7 +359,7 @@ public class testcodenames3 implements ActionListener {
         pnlRedTeam.setBackground(new Color(170, 60, 50));
         pnlRedTeam.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
 
-        lblRedCount = new JLabel(String.valueOf(redLeft));
+        lblRedCount = new JLabel(String.valueOf(intRedLeft));
         lblRedCount.setFont(new Font("Arial", Font.BOLD, 48));
         lblRedCount.setForeground(Color.WHITE);
 
@@ -389,7 +389,7 @@ public class testcodenames3 implements ActionListener {
         pnlBlueTeam.setBackground(new Color(60, 130, 160));
         pnlBlueTeam.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
 
-        lblBlueCount = new JLabel(String.valueOf(blueLeft));
+        lblBlueCount = new JLabel(String.valueOf(intBlueLeft));
         lblBlueCount.setFont(new Font("Arial", Font.BOLD, 48));
         lblBlueCount.setForeground(Color.WHITE);
 
@@ -409,31 +409,29 @@ public class testcodenames3 implements ActionListener {
 
         rightPanel.add(pnlBlueTeam, BorderLayout.NORTH);
 
-        gameLog = new JTextArea();
-        gameLog.setEditable(false);
-        JScrollPane logScroll = new JScrollPane(gameLog);
+        txtGameLog = new JTextArea();
+        txtGameLog.setEditable(false);
+        JScrollPane logScroll = new JScrollPane(txtGameLog);
         rightPanel.add(logScroll, BorderLayout.CENTER);
         
-        JPanel chatPanel = new JPanel();
-        chatPanel.setLayout(new BoxLayout(chatPanel, BoxLayout.Y_AXIS));
-        chatPanel.setBackground(new Color(210, 180, 140));
+        JPanel pnlChat = new JPanel();
+        pnlChat.setLayout(new BoxLayout(pnlChat, BoxLayout.Y_AXIS));
+        pnlChat.setBackground(new Color(210, 180, 140));
 
-
-        // Chat input field
-        chatField = new JTextField();
-        chatField.setPreferredSize(new Dimension(180, 30));
-        chatField.setMaximumSize(new Dimension(Integer.MAX_VALUE, 30));
-        chatField.addActionListener(e -> {
-            String text = chatField.getText().trim();
-            if (!text.isEmpty()) {
-                log("You: " + text);
-                sendNetwork("CHAT:" + text);
-                chatField.setText("");
+        txtChatField = new JTextField();
+        txtChatField.setPreferredSize(new Dimension(180, 30));
+        txtChatField.setMaximumSize(new Dimension(Integer.MAX_VALUE, 30));
+        txtChatField.addActionListener(e -> {
+            String strText = txtChatField.getText().trim();
+            if (!strText.isEmpty()) {
+                log("You: " + strText);
+                sendNetwork("CHAT:" + strText);
+                txtChatField.setText("");
             }
         });
 
-        chatPanel.add(chatField);
-        rightPanel.add(chatPanel, BorderLayout.SOUTH);
+        pnlChat.add(txtChatField);
+        rightPanel.add(pnlChat, BorderLayout.SOUTH);
 
         mainPanel.add(rightPanel, BorderLayout.EAST);
 
@@ -454,9 +452,9 @@ public class testcodenames3 implements ActionListener {
         mainPanel.add(bottomPanel, BorderLayout.SOUTH);
 
         // CENTER BOARD PANEL
-        JPanel centerPanel = new JPanel();
-        centerPanel.setLayout(new BoxLayout(centerPanel, BoxLayout.Y_AXIS));
-        centerPanel.setBackground(new Color(210, 180, 140));
+        JPanel pnlCenter = new JPanel();
+        pnlCenter.setLayout(new BoxLayout(pnlCenter, BoxLayout.Y_AXIS));
+        pnlCenter.setBackground(new Color(210, 180, 140));
 
         // Turn Box
         JPanel pnlTurnBox = new JPanel();
@@ -464,34 +462,34 @@ public class testcodenames3 implements ActionListener {
         pnlTurnBox.setMaximumSize(new Dimension(880, 45));
         pnlTurnBox.setBackground(Color.WHITE);
         pnlTurnBox.setBorder(BorderFactory.createLineBorder(Color.BLACK));
-        lblTurnBox = new JLabel(currentTurn + "'s turn", SwingConstants.CENTER);
+        lblTurnBox = new JLabel(strCurrentTurn + "'s turn", SwingConstants.CENTER);
         lblTurnBox.setFont(new Font("Arial", Font.BOLD, 18));
         pnlTurnBox.add(lblTurnBox);
-        centerPanel.add(pnlTurnBox);
-        centerPanel.add(Box.createVerticalStrut(10));
+        pnlCenter.add(pnlTurnBox);
+        pnlCenter.add(Box.createVerticalStrut(10));
 
         // Board Grid
         boardPanel = new JPanel(new GridLayout(5, 5, 15, 15));
         boardPanel.setBackground(new Color(139, 90, 43));
-        wordButtons = new JButton[5][5];
-        for (int r = 0; r < 5; r++)
-            for (int c = 0; c < 5; c++) {
-                wordButtons[r][c] = new JButton("WORD");
-                wordButtons[r][c].setFont(new Font("Arial", Font.BOLD, 18));
-                wordButtons[r][c].setBackground(new Color(245, 235, 200));
-                wordButtons[r][c].setFocusPainted(false);
-                wordButtons[r][c].setOpaque(true);
-                wordButtons[r][c].setBorderPainted(false);
-                wordButtons[r][c].addActionListener(this);
+        btnWord = new JButton[5][5];
+        for (int intRow = 0; intRow < 5; intRow++)
+            for (int intCol = 0; intCol < 5; intCol++) {
+                btnWord[intRow][intCol] = new JButton("WORD");
+                btnWord[intRow][intCol].setFont(new Font("Arial", Font.BOLD, 18));
+                btnWord[intRow][intCol].setBackground(new Color(245, 235, 200));
+                btnWord[intRow][intCol].setFocusPainted(false);
+                btnWord[intRow][intCol].setOpaque(true);
+                btnWord[intRow][intCol].setBorderPainted(false);
+                btnWord[intRow][intCol].addActionListener(this);
 
                 // Initialize animation colors
-                currentColors[r][c] = wordButtons[r][c].getBackground();
-                targetColors[r][c] = wordButtons[r][c].getBackground();
+                colCurrent[intRow][intCol] = btnWord[intRow][intCol].getBackground();
+                colTarget[intRow][intCol] = btnWord[intRow][intCol].getBackground();
 
-                boardPanel.add(wordButtons[r][c]);
+                boardPanel.add(btnWord[intRow][intCol]);
             }
-        centerPanel.add(boardPanel);
-        centerPanel.add(Box.createVerticalStrut(10));
+        pnlCenter.add(boardPanel);
+        pnlCenter.add(Box.createVerticalStrut(10));
 
         // Hint row
         JPanel pnlHintRow = new JPanel();
@@ -526,9 +524,9 @@ public class testcodenames3 implements ActionListener {
         pnlHintRow.add(pnlHintNumber);
         pnlHintRow.add(Box.createHorizontalGlue());
 
-        centerPanel.add(pnlHintRow);
+        pnlCenter.add(pnlHintRow);
 
-        mainPanel.add(centerPanel, BorderLayout.CENTER);
+        mainPanel.add(pnlCenter, BorderLayout.CENTER);
 
         theFrame.setSize(1280, 720);
         theFrame.setResizable(false);
@@ -540,82 +538,80 @@ public class testcodenames3 implements ActionListener {
     }
 
     void setupBoardUI() {
-        for (int r = 0; r < 5; r++)
-            for (int c = 0; c < 5; c++)
-                wordButtons[r][c].setText(words[r][c]);
+        for (int intRow = 0; intRow < 5; intRow++)
+            for (int intCol = 0; intCol < 5; intCol++)
+                btnWord[intRow][intCol].setText(strWords[intRow][intCol]);
 
         updateTargetColors();
     }
 
-    // ======================
-    // ANIMATION HELPERS
-    // ======================
+    // animation timer
     void setupAnimationTimer() {
-        animationTimer = new javax.swing.Timer(1000 / FPS, e -> updateAnimations());
+        animationTimer = new javax.swing.Timer(1000 / intFPS, e -> updateAnimations());
         animationTimer.start();
     }
 
     void updateAnimations() {
-        boolean updated = false;
+        boolean blnUpdated = false;
         // Animate buttons
-        for (int r = 0; r < 5; r++) {
-            for (int c = 0; c < 5; c++) {
-                Color cur = currentColors[r][c];
-                Color tgt = targetColors[r][c];
-                if (!cur.equals(tgt)) {
-                    currentColors[r][c] = blendColors(cur, tgt, COLOR_STEP);
-                    wordButtons[r][c].setBackground(currentColors[r][c]);
-                    updated = true;
+        for (int intRow = 0; intRow < 5; intRow++) {
+            for (int intCol = 0; intCol < 5; intCol++) {
+                Color colCur = colCurrent[intRow][intCol];
+                Color colTgt = colTarget[intRow][intCol];
+                if (!colCur.equals(colTgt)) {
+                    colCurrent[intRow][intCol] = blendColors(colCur, colTgt, fltColorStep);
+                    btnWord[intRow][intCol].setBackground(colCurrent[intRow][intCol]);
+                    blnUpdated = true;
                 }
             }
         }
 
         // Animate Red score
-        if (displayedRed != redLeft) {
-            if (displayedRed > redLeft) displayedRed--;
-            else displayedRed++;
-            lblRedCount.setText(String.valueOf(displayedRed));
-            updated = true;
+        if (intDisplayedRed != intRedLeft) {
+            if (intDisplayedRed > intRedLeft) intDisplayedRed--;
+            else intDisplayedRed++;
+            lblRedCount.setText(String.valueOf(intDisplayedRed));
+            blnUpdated = true;
         }
 
         // Animate Blue score
-        if (displayedBlue != blueLeft) {
-            if (displayedBlue > blueLeft) displayedBlue--;
-            else displayedBlue++;
-            lblBlueCount.setText(String.valueOf(displayedBlue));
-            updated = true;
+        if (intDisplayedBlue != intBlueLeft) {
+            if (intDisplayedBlue > intBlueLeft) intDisplayedBlue--;
+            else intDisplayedBlue++;
+            lblBlueCount.setText(String.valueOf(intDisplayedBlue));
+            blnUpdated = true;
         }
 
-        if (updated) boardPanel.repaint();
+        if (blnUpdated) boardPanel.repaint();
     }
 
-    Color blendColors(Color start, Color end, float step) {
-        float r = start.getRed() + (end.getRed() - start.getRed()) * step;
-        float g = start.getGreen() + (end.getGreen() - start.getGreen()) * step;
-        float b = start.getBlue() + (end.getBlue() - start.getBlue()) * step;
-        return new Color(clamp(r), clamp(g), clamp(b));
+    Color blendColors(Color colStart, Color colEnd, float fltStep) {
+        float fltR = colStart.getRed() + (colEnd.getRed() - colStart.getRed()) * fltStep;
+        float fltG = colStart.getGreen() + (colEnd.getGreen() - colStart.getGreen()) * fltStep;
+        float fltB = colStart.getBlue() + (colEnd.getBlue() - colStart.getBlue()) * fltStep;
+        return new Color(clamp(fltR), clamp(fltG), clamp(fltB));
     }
 
-    int clamp(float val) {
-        return Math.min(255, Math.max(0, Math.round(val)));
+    int clamp(float fltVal) {
+        return Math.min(255, Math.max(0, Math.round(fltVal)));
     }
 
     void updateTargetColors() {
-        for (int r = 0; r < 5; r++) {
-            for (int c = 0; c < 5; c++) {
-                if (revealed[r][c]) {
-                    targetColors[r][c] = getColorFromString(colors[r][c]);
-                } else if (myRole.equals("SPYMASTER") && overlayOn) {
-                    targetColors[r][c] = getColorFromString(colors[r][c]);
+        for (int intRow = 0; intRow < 5; intRow++) {
+            for (int intCol = 0; intCol < 5; intCol++) {
+                if (blnRevealed[intRow][intCol]) {
+                    colTarget[intRow][intCol] = getColorFromString(strColors[intRow][intCol]);
+                } else if (strMyRole.equals("SPYMASTER") && blnOverlayOn) {
+                    colTarget[intRow][intCol] = getColorFromString(strColors[intRow][intCol]);
                 } else {
-                    targetColors[r][c] = new Color(245, 235, 200);
+                    colTarget[intRow][intCol] = new Color(245, 235, 200);
                 }
             }
         }
     }
 
-    Color getColorFromString(String s) {
-        switch (s) {
+    Color getColorFromString(String strVal) {
+        switch (strVal) {
             case "RED": return new Color(170, 60, 50);
             case "BLUE": return new Color(60, 130, 160);
             case "BLACK": return new Color(90, 90, 90);
@@ -624,157 +620,153 @@ public class testcodenames3 implements ActionListener {
     }
 
     void animateScores() {
-        // animation handled in updateAnimations
+        // score animation handled in updateAnimations
     }
 
-    // ======================
-    // NETWORKING AND LOGGING (unchanged)
-    // ======================
+    // networking and log
     void setupSocket() {
-        if (isServer) {
+        if (blnIsServer) {
             ssm = new SuperSocketMaster(1337, evt -> handleNetwork());
-            if (!ssm.connect()) {      // FIX: server actually starts
+            if (!ssm.connect()) {
                 log("Server failed to start!");
                 return;
             }
             log("Server started on port 1337");
             try { Thread.sleep(1000); } catch (Exception ignored) {}
         } else {
-            ssm = new SuperSocketMaster(serverIP, 1337, evt -> handleNetwork());
-            boolean connected = false;
+            ssm = new SuperSocketMaster(strServerIP, 1337, evt -> handleNetwork());
+            boolean blnConnected = false;
             for (int i = 0; i < 10; i++) {
                 if (ssm.connect()) {
-                    connected = true;
+                    blnConnected = true;
                     break;
                 }
                 try { Thread.sleep(200); } catch (Exception ignored) {}
             }
-            if (connected) {
-                log("Connected to server: " + serverIP);
+            if (blnConnected) {
+                log("Connected to server: " + strServerIP);
                 sendNetwork("REQUESTBOARD");
-            }
-            else log("Failed to connect to server");
+            } else log("Failed to connect to server");
         }
     }
 
     void sendBoardToClient() {
-        StringBuilder w = new StringBuilder();
-        StringBuilder c = new StringBuilder();
+        StringBuilder strW = new StringBuilder();
+        StringBuilder strC = new StringBuilder();
 
-        for (int r = 0; r < 5; r++)
-            for (int col = 0; col < 5; col++) {
-                w.append(words[r][col]);
-                c.append(colors[r][col]);
-                if (!(r == 4 && col == 4)) {
-                    w.append(",");
-                    c.append(",");
+        for (int intRow = 0; intRow < 5; intRow++)
+            for (int intCol = 0; intCol < 5; intCol++) {
+                strW.append(strWords[intRow][intCol]);
+                strC.append(strColors[intRow][intCol]);
+                if (!(intRow == 4 && intCol == 4)) {
+                    strW.append(",");
+                    strC.append(",");
                 }
             }
 
-        sendNetwork("BOARD:" + w.toString() + "|" + c.toString());
+        sendNetwork("BOARD:" + strW.toString() + "|" + strC.toString());
     }
 
     void handleNetwork() {
-        String msg = ssm.readText();
-        if (msg == null) return;
+        String strMsg = ssm.readText();
+        if (strMsg == null) return;
 
-        log("Network: " + msg);
+        log("Network: " + strMsg);
 
-        if (msg.equals("REQUESTBOARD") && isServer) {
+        if (strMsg.equals("REQUESTBOARD") && blnIsServer) {
             sendBoardToClient();
         }
 
-        if (msg.startsWith("BOARD:")) {
-            String[] parts = msg.substring(6).split("\\|");
-            String[] w = parts[0].split(",");
-            String[] c = parts[1].split(",");
+        if (strMsg.startsWith("BOARD:")) {
+            String[] arrParts = strMsg.substring(6).split("\\|");
+            String[] arrW = arrParts[0].split(",");
+            String[] arrC = arrParts[1].split(",");
 
-            int idx = 0;
-            for (int r = 0; r < 5; r++)
-                for (int col = 0; col < 5; col++) {
-                    words[r][col] = w[idx];
-                    colors[r][col] = c[idx];
-                    idx++;
+            int intIdx = 0;
+            for (int intRow = 0; intRow < 5; intRow++)
+                for (int intCol = 0; intCol < 5; intCol++) {
+                    strWords[intRow][intCol] = arrW[intIdx];
+                    strColors[intRow][intCol] = arrC[intIdx];
+                    intIdx++;
                 }
 
             setupBoardUI();
-            gameStarted = true;
+            blnGameStarted = true;
 
-            if (myRole.equals("SPYMASTER")) {
+            if (strMyRole.equals("SPYMASTER")) {
                 updateTargetColors();
             }
         }
 
-        if (msg.startsWith("CLICK:")) {
-            String[] p = msg.split(":");
-            int r = Integer.parseInt(p[1]);
-            int c = Integer.parseInt(p[2]);
-            if (!revealed[r][c]) {
-                revealed[r][c] = true;
-                wordButtons[r][c].setEnabled(false);
+        if (strMsg.startsWith("CLICK:")) {
+            String[] arrP = strMsg.split(":");
+            int intRow = Integer.parseInt(arrP[1]);
+            int intCol = Integer.parseInt(arrP[2]);
+            if (!blnRevealed[intRow][intCol]) {
+                blnRevealed[intRow][intCol] = true;
+                btnWord[intRow][intCol].setEnabled(false);
 
-                // set target color for animation
                 updateTargetColors();
 
-                if (colors[r][c].equals("RED")) redLeft--;
-                if (colors[r][c].equals("BLUE")) blueLeft--;
+                if (strColors[intRow][intCol].equals("RED")) intRedLeft--;
+                if (strColors[intRow][intCol].equals("BLUE")) intBlueLeft--;
 
                 animateScores();
 
-                // LOG REMOTE CLICK
-                log(operativeLabel() + " taps " + words[r][c]);
+                log(getOperativeLabel() + " taps " + strWords[intRow][intCol]);
             }
         }
 
-        if (msg.startsWith("ENDTURN:")) {
-            currentTurn = msg.split(":")[1];
-            lblTurnBox.setText(currentTurn + "'s turn");
+        if (strMsg.startsWith("ENDTURN:")) {
+            strCurrentTurn = strMsg.split(":")[1];
+            lblTurnBox.setText(strCurrentTurn + "'s turn");
             lblHint.setText("Waiting for clue...");
             lblHintNumber.setText("");
-            timeLeft = 60;
+            intTimeLeft = 60;
 
-            log(currentTurn + " team's turn begins");
+            log(strCurrentTurn + " team's turn begins");
 
             updateTargetColors();
         }
 
-        if (msg.startsWith("CLUE:")) {
-            String[] parts = msg.split(":");
-            if (parts.length == 3) {
-                String word = parts[1];
-                String number = parts[2];
-                lblHint.setText(word);
-                lblHintNumber.setText(number);
+        if (strMsg.startsWith("CLUE:")) {
+            String[] arrParts = strMsg.split(":");
+            if (arrParts.length == 3) {
+                String strWord = arrParts[1];
+                String strNumber = arrParts[2];
+                lblHint.setText(strWord);
+                lblHintNumber.setText(strNumber);
 
-                log(spymasterLabel() + " gives clue " + word + " " + number);
+                log(getSpymasterLabel() + " gives clue " + strWord + " " + strNumber);
             }
         }
 
-        if (msg.startsWith("CHAT:")) {
-            log("Player: " + msg.substring(5));
+        if (strMsg.startsWith("CHAT:")) {
+            log("Player: " + strMsg.substring(5));
         }
 
-        if (msg.startsWith("START:")) {
-            String[] parts = msg.split(":");
-            myTeam = parts[1];
-            myRole = parts[2];
-            log("Assigned: " + myTeam + " " + myRole);
+        if (strMsg.startsWith("START:")) {
+            String[] arrParts = strMsg.split(":");
+            strMyTeam = arrParts[1];
+            strMyRole = arrParts[2];
+            log("Assigned: " + strMyTeam + " " + strMyRole);
 
-            if (myRole.equals("SPYMASTER")) {
+            if (strMyRole.equals("SPYMASTER")) {
                 updateTargetColors();
             }
         }
     }
 
-    void sendNetwork(String msg) {
-        if (ssm != null) ssm.sendText(msg);
+    void sendNetwork(String strMsg) {
+        if (ssm != null) ssm.sendText(strMsg);
     }
 
-    void log(String msg) {
-        if (gameLog != null) gameLog.append(msg + "\n");
+    void log(String strMsg) {
+        if (txtGameLog != null) txtGameLog.append(strMsg + "\n");
     }
 
     public static void main(String[] args) {
-        SwingUtilities.invokeLater(() -> new testcodenames3("Codenames"));
+        SwingUtilities.invokeLater(() -> new MainCodenamesGame("Codenames"));
     }
 }
+
