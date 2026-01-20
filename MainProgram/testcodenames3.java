@@ -55,6 +55,20 @@ public class testcodenames3 implements ActionListener {
 
     boolean gameStarted = false;
 
+    // ANIMATION TRACKING
+
+    Color[][] targetColors = new Color[5][5]; 
+    Color[][] currentColors = new Color[5][5]; 
+
+    int displayedRed = redLeft;  
+    int displayedBlue = blueLeft; 
+
+    javax.swing.Timer animationTimer; // 60 FPS animation
+
+    final int FPS = 60; // 60 frames per second
+    final int ANIM_DURATION = 300; // duration in ms for color transitions
+    final float COLOR_STEP = 1.0f / ((ANIM_DURATION / 1000f) * FPS); // fraction per frame
+
     // ======================
     // HELPER METHODS (LABELS)
     // ======================
@@ -75,8 +89,7 @@ public class testcodenames3 implements ActionListener {
 
         if (evt.getSource() == btnToggleOverlay) {
             overlayOn = !overlayOn;
-            updateBoardColors();
-            boardPanel.repaint();
+            updateTargetColors();
             return;
         }
 
@@ -102,9 +115,11 @@ public class testcodenames3 implements ActionListener {
             for (int c = 0; c < 5; c++) {
                 if (evt.getSource() == wordButtons[r][c] && !revealed[r][c]) {
                     revealed[r][c] = true;
-                    revealColor(r, c);
-                    wordButtons[r][c].setEnabled(false);
 
+                    // Set target color for animation
+                    updateTargetColors();
+
+                    wordButtons[r][c].setEnabled(false);
                     sendNetwork("CLICK:" + r + ":" + c);
 
                     // LOG LOCAL CLICK
@@ -119,8 +134,8 @@ public class testcodenames3 implements ActionListener {
                     if (colors[r][c].equals("RED")) redLeft--;
                     if (colors[r][c].equals("BLUE")) blueLeft--;
 
-                    lblRedCount.setText(String.valueOf(redLeft));
-                    lblBlueCount.setText(String.valueOf(blueLeft));
+                    // Animate score update
+                    animateScores();
 
                     if (redLeft == 0 || blueLeft == 0) {
                         log((redLeft == 0 ? "RED" : "BLUE") + " TEAM WINS!");
@@ -139,6 +154,7 @@ public class testcodenames3 implements ActionListener {
 
     public testcodenames3(String title) {
         setupGUI();
+        setupAnimationTimer(); // start animation timer for buttons and scores
     }
 
     void startTimer() {
@@ -174,6 +190,8 @@ public class testcodenames3 implements ActionListener {
         sendNetwork("ENDTURN:" + currentTurn);
 
         log(currentTurn + " team's turn begins");
+
+        updateTargetColors();
     }
 
     // ======================
@@ -267,7 +285,7 @@ public class testcodenames3 implements ActionListener {
             }
 
             if (myRole.equals("SPYMASTER")) {
-                updateBoardColors();
+                updateTargetColors();
             }
         });
 
@@ -282,7 +300,7 @@ public class testcodenames3 implements ActionListener {
 
     void startGame() {
         setupBoardUI();
-        updateBoardColors();
+        updateTargetColors();
         startTimer();
         gameStarted = true;
         sendNetwork("START:" + myTeam + ":" + myRole);
@@ -443,6 +461,11 @@ public class testcodenames3 implements ActionListener {
                 wordButtons[r][c].setOpaque(true);
                 wordButtons[r][c].setBorderPainted(false);
                 wordButtons[r][c].addActionListener(this);
+
+                // Initialize animation colors
+                currentColors[r][c] = wordButtons[r][c].getBackground();
+                targetColors[r][c] = wordButtons[r][c].getBackground();
+
                 boardPanel.add(wordButtons[r][c]);
             }
         centerPanel.add(boardPanel);
@@ -499,52 +522,92 @@ public class testcodenames3 implements ActionListener {
             for (int c = 0; c < 5; c++)
                 wordButtons[r][c].setText(words[r][c]);
 
-        updateBoardColors();
+        updateTargetColors();
     }
 
-    void updateBoardColors() {
+    // ======================
+    // ANIMATION HELPERS
+    // ======================
+    void setupAnimationTimer() {
+        animationTimer = new javax.swing.Timer(1000 / FPS, e -> updateAnimations());
+        animationTimer.start();
+    }
+
+    void updateAnimations() {
+        boolean updated = false;
+        // Animate buttons
         for (int r = 0; r < 5; r++) {
             for (int c = 0; c < 5; c++) {
-                JButton b = wordButtons[r][c];
-                if (colors[r][c] == null) {  // FIX: prevent crash
-                    b.setBackground(new Color(245, 235, 200));
-                    continue;
+                Color cur = currentColors[r][c];
+                Color tgt = targetColors[r][c];
+                if (!cur.equals(tgt)) {
+                    currentColors[r][c] = blendColors(cur, tgt, COLOR_STEP);
+                    wordButtons[r][c].setBackground(currentColors[r][c]);
+                    updated = true;
                 }
+            }
+        }
+
+        // Animate Red score
+        if (displayedRed != redLeft) {
+            if (displayedRed > redLeft) displayedRed--;
+            else displayedRed++;
+            lblRedCount.setText(String.valueOf(displayedRed));
+            updated = true;
+        }
+
+        // Animate Blue score
+        if (displayedBlue != blueLeft) {
+            if (displayedBlue > blueLeft) displayedBlue--;
+            else displayedBlue++;
+            lblBlueCount.setText(String.valueOf(displayedBlue));
+            updated = true;
+        }
+
+        if (updated) boardPanel.repaint();
+    }
+
+    Color blendColors(Color start, Color end, float step) {
+        float r = start.getRed() + (end.getRed() - start.getRed()) * step;
+        float g = start.getGreen() + (end.getGreen() - start.getGreen()) * step;
+        float b = start.getBlue() + (end.getBlue() - start.getBlue()) * step;
+        return new Color(clamp(r), clamp(g), clamp(b));
+    }
+
+    int clamp(float val) {
+        return Math.min(255, Math.max(0, Math.round(val)));
+    }
+
+    void updateTargetColors() {
+        for (int r = 0; r < 5; r++) {
+            for (int c = 0; c < 5; c++) {
                 if (revealed[r][c]) {
-                    revealColor(r, c, b);
+                    targetColors[r][c] = getColorFromString(colors[r][c]);
                 } else if (myRole.equals("SPYMASTER") && overlayOn) {
-                    revealColor(r, c, b);
+                    targetColors[r][c] = getColorFromString(colors[r][c]);
                 } else {
-                    b.setBackground(new Color(245, 235, 200));
+                    targetColors[r][c] = new Color(245, 235, 200);
                 }
             }
         }
     }
 
-    void revealColor(int r, int c) {
-        revealColor(r, c, wordButtons[r][c]);
-    }
-
-    void revealColor(int r, int c, JButton b) {
-        switch (colors[r][c]) {
-            case "RED":
-                b.setBackground(new Color(170, 60, 50));
-                b.setForeground(Color.WHITE);
-                break;
-            case "BLUE":
-                b.setBackground(new Color(60, 130, 160));
-                b.setForeground(Color.WHITE);
-                break;
-            case "BLACK":
-                b.setBackground(new Color(90, 90, 90));
-                b.setForeground(Color.WHITE);
-                break;
-            default:
-                b.setBackground(new Color(200, 190, 170));
-                b.setForeground(Color.BLACK);
+    Color getColorFromString(String s) {
+        switch (s) {
+            case "RED": return new Color(170, 60, 50);
+            case "BLUE": return new Color(60, 130, 160);
+            case "BLACK": return new Color(90, 90, 90);
+            default: return new Color(200, 190, 170);
         }
     }
 
+    void animateScores() {
+        // animation handled in updateAnimations
+    }
+
+    // ======================
+    // NETWORKING AND LOGGING (unchanged)
+    // ======================
     void setupSocket() {
         if (isServer) {
             ssm = new SuperSocketMaster(1337, evt -> handleNetwork());
@@ -566,7 +629,7 @@ public class testcodenames3 implements ActionListener {
             }
             if (connected) {
                 log("Connected to server: " + serverIP);
-                sendNetwork("REQUESTBOARD"); 
+                sendNetwork("REQUESTBOARD");
             }
             else log("Failed to connect to server");
         }
@@ -616,7 +679,7 @@ public class testcodenames3 implements ActionListener {
             gameStarted = true;
 
             if (myRole.equals("SPYMASTER")) {
-                updateBoardColors();
+                updateTargetColors();
             }
         }
 
@@ -627,13 +690,14 @@ public class testcodenames3 implements ActionListener {
             if (!revealed[r][c]) {
                 revealed[r][c] = true;
                 wordButtons[r][c].setEnabled(false);
-                revealColor(r, c);
+
+                // set target color for animation
+                updateTargetColors();
 
                 if (colors[r][c].equals("RED")) redLeft--;
                 if (colors[r][c].equals("BLUE")) blueLeft--;
 
-                lblRedCount.setText(String.valueOf(redLeft));
-                lblBlueCount.setText(String.valueOf(blueLeft));
+                animateScores();
 
                 // LOG REMOTE CLICK
                 log(operativeLabel() + " taps " + words[r][c]);
@@ -648,6 +712,8 @@ public class testcodenames3 implements ActionListener {
             timeLeft = 60;
 
             log(currentTurn + " team's turn begins");
+
+            updateTargetColors();
         }
 
         if (msg.startsWith("CLUE:")) {
@@ -673,7 +739,7 @@ public class testcodenames3 implements ActionListener {
             log("Assigned: " + myTeam + " " + myRole);
 
             if (myRole.equals("SPYMASTER")) {
-                updateBoardColors();
+                updateTargetColors();
             }
         }
     }
