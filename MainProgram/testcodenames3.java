@@ -45,6 +45,7 @@ public class testcodenames3 implements ActionListener {
     SuperSocketMaster ssm;
     boolean isServer = false;
     String serverIP = "";
+    JTextField chatField;
 
     // Overlay
     boolean overlayOn = true;
@@ -412,6 +413,27 @@ public class testcodenames3 implements ActionListener {
         gameLog.setEditable(false);
         JScrollPane logScroll = new JScrollPane(gameLog);
         rightPanel.add(logScroll, BorderLayout.CENTER);
+        
+        JPanel chatPanel = new JPanel();
+        chatPanel.setLayout(new BoxLayout(chatPanel, BoxLayout.Y_AXIS));
+        chatPanel.setBackground(new Color(210, 180, 140));
+
+
+        // Chat input field
+        chatField = new JTextField();
+        chatField.setPreferredSize(new Dimension(180, 30));
+        chatField.setMaximumSize(new Dimension(Integer.MAX_VALUE, 30));
+        chatField.addActionListener(e -> {
+            String text = chatField.getText().trim();
+            if (!text.isEmpty()) {
+                log("You: " + text);
+                sendNetwork("CHAT:" + text);
+                chatField.setText("");
+            }
+        });
+
+        chatPanel.add(chatField);
+        rightPanel.add(chatPanel, BorderLayout.SOUTH);
 
         mainPanel.add(rightPanel, BorderLayout.EAST);
 
@@ -729,7 +751,7 @@ public class testcodenames3 implements ActionListener {
         }
 
         if (msg.startsWith("CHAT:")) {
-            log("Opponent: " + msg.substring(5));
+            log("Player: " + msg.substring(5));
         }
 
         if (msg.startsWith("START:")) {
