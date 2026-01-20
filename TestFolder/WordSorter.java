@@ -1,5 +1,4 @@
-package MainProgram;
-//Get a randomizer like with the poker game, and get 25 random words for the wordlist
+
 
 import java.io.*;
 
