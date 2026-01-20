@@ -190,6 +190,18 @@ public class testcodenames3 implements ActionListener {
                 number = clue.substring(idx + 1).trim();
             }
 
+            // ===== NEW VALIDATION =====
+            for (int r = 0; r < 5; r++) {
+                for (int c = 0; c < 5; c++) {
+                    if (words[r][c].equalsIgnoreCase(word)) {
+                        JOptionPane.showMessageDialog(theFrame,
+                                "Invalid clue! You cannot use a word that is already on the board.");
+                        return;
+                    }
+                }
+            }
+            // ===== END VALIDATION =====
+
             lblHint.setText(word);
             lblHintNumber.setText(number);
 
@@ -494,6 +506,10 @@ public class testcodenames3 implements ActionListener {
         for (int r = 0; r < 5; r++) {
             for (int c = 0; c < 5; c++) {
                 JButton b = wordButtons[r][c];
+                if (colors[r][c] == null) {  // FIX: prevent crash
+                    b.setBackground(new Color(245, 235, 200));
+                    continue;
+                }
                 if (revealed[r][c]) {
                     revealColor(r, c, b);
                 } else if (myRole.equals("SPYMASTER") && overlayOn) {
@@ -532,10 +548,26 @@ public class testcodenames3 implements ActionListener {
     void setupSocket() {
         if (isServer) {
             ssm = new SuperSocketMaster(1337, evt -> handleNetwork());
+            if (!ssm.connect()) {      // FIX: server actually starts
+                log("Server failed to start!");
+                return;
+            }
             log("Server started on port 1337");
+            try { Thread.sleep(1000); } catch (Exception ignored) {}
         } else {
             ssm = new SuperSocketMaster(serverIP, 1337, evt -> handleNetwork());
-            if (ssm.connect()) log("Connected to server: " + serverIP);
+            boolean connected = false;
+            for (int i = 0; i < 10; i++) {
+                if (ssm.connect()) {
+                    connected = true;
+                    break;
+                }
+                try { Thread.sleep(200); } catch (Exception ignored) {}
+            }
+            if (connected) {
+                log("Connected to server: " + serverIP);
+                sendNetwork("REQUESTBOARD"); 
+            }
             else log("Failed to connect to server");
         }
     }
@@ -562,6 +594,10 @@ public class testcodenames3 implements ActionListener {
         if (msg == null) return;
 
         log("Network: " + msg);
+
+        if (msg.equals("REQUESTBOARD") && isServer) {
+            sendBoardToClient();
+        }
 
         if (msg.startsWith("BOARD:")) {
             String[] parts = msg.substring(6).split("\\|");
