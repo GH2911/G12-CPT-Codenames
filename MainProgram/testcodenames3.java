@@ -56,6 +56,14 @@ public class testcodenames3 implements ActionListener {
 
     @Override
     public void actionPerformed(ActionEvent evt) {
+
+        if (evt.getSource() == btnToggleOverlay) {
+            overlayOn = !overlayOn;
+            updateBoardColors();
+            boardPanel.repaint();
+            return;
+        }
+
         if (!gameStarted) return;
 
         if (evt.getSource() == btnEndTurn) {
@@ -385,6 +393,8 @@ public class testcodenames3 implements ActionListener {
                 wordButtons[r][c].setFont(new Font("Arial", Font.BOLD, 18));
                 wordButtons[r][c].setBackground(new Color(245, 235, 200));
                 wordButtons[r][c].setFocusPainted(false);
+                wordButtons[r][c].setOpaque(true);
+                wordButtons[r][c].setBorderPainted(false);
                 wordButtons[r][c].addActionListener(this);
                 boardPanel.add(wordButtons[r][c]);
             }
@@ -462,10 +472,21 @@ public class testcodenames3 implements ActionListener {
 
     void revealColor(int r, int c, JButton b) {
         switch (colors[r][c]) {
-            case "RED": b.setBackground(new Color(170, 60, 50)); break;
-            case "BLUE": b.setBackground(new Color(60, 130, 160)); break;
-            case "BLACK": b.setBackground(Color.BLACK); break;
-            default: b.setBackground(new Color(200, 190, 170));
+            case "RED":
+                b.setBackground(new Color(170, 60, 50));
+                b.setForeground(Color.WHITE);
+                break;
+            case "BLUE":
+                b.setBackground(new Color(60, 130, 160));
+                b.setForeground(Color.WHITE);
+                break;
+            case "BLACK":
+                b.setBackground(new Color(90, 90, 90));
+                b.setForeground(Color.WHITE);
+                break;
+            default: // NEUTRAL
+                b.setBackground(new Color(200, 190, 170));
+                b.setForeground(Color.BLACK);
         }
     }
 
