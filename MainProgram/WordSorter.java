@@ -76,3 +76,24 @@ public class WordSorter{
         return strThing;
     }
 }
+
+
+// CHAT INPUT CONTAINER (50px gap)
+        JPanel chatPanel = new JPanel();
+        chatPanel.setLayout(new BoxLayout(chatPanel, BoxLayout.Y_AXIS));
+        chatPanel.setBackground(new Color(210, 180, 140));
+
+        // Chat input field
+        TF.setPreferredSize(new Dimension(180, 30));
+        TF.setMaximumSize(new Dimension(Integer.MAX_VALUE, 30));
+        TF.addActionListener(e -> {
+            String text = TF.getText().trim();
+            if (!text.isEmpty()) {
+                log("You: " + text);
+            sendNetwork("CHAT:" + text);
+            TF.setText("");
+            }
+        });
+
+        chatPanel.add(TF);
+        rightPanel.add(chatPanel, BorderLayout.SOUTH);
