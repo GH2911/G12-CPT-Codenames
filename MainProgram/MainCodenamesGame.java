@@ -177,7 +177,7 @@ public class MainCodenamesGame implements ActionListener {
         turnTimer.start();
     }
 
-    // End of Turn
+    // End of Turn .
 
     void endTurn() {
         log(getOperativeLabel() + " ends guessing");
