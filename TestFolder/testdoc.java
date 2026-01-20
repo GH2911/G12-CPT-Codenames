@@ -1,171 +1,687 @@
+
 import javax.swing.*;
-
-import sockets.SuperSocketMaster;
-
 import java.awt.*;
 import java.awt.event.*;
+import java.io.*;
+import java.util.*;
+import sockets.SuperSocketMaster;
 
-// SOCKET
-// Make sure SuperSocketMaster.java is in the same folder
 public class testdoc implements ActionListener {
 
     // Properties
-    public JFrame theFrame;
-    public JPanel mainPanel;
-    public JPanel boardPanel;
-    public JPanel leftPanel;
-    public JPanel rightPanel;
-    public JPanel topPanel;
-    public JPanel bottomPanel;
-    public JButton[][] wordButtons;
-
-    public final int intROWS = 5;
-    public final int intCOLS = 5;
-
-    // SOCKET
-    SuperSocketMaster ssm;
+    JFrame theFrame;
+    JPanel mainPanel, boardPanel, leftPanel, rightPanel, bottomPanel;
+    JButton[][] wordButtons;
+    JButton btnEndTurn, btnToggleOverlay, btnGiveClue;
+    JTextField chatInput;
     JTextArea gameLog;
-    JButton btnServer;
-    JButton btnClient;
 
-    // Methods
+    final int intROWS = 5;
+    final int intCOLS = 5;
+
+    String[][] words = new String[5][5];
+    String[][] colors = new String[5][5];
+    boolean[][] revealed = new boolean[5][5];
+
+    String myRole = "OPERATIVE";
+    String myTeam = "RED";
+    String currentTurn = "RED";
+
+    int redLeft = 9;
+    int blueLeft = 8;
+
+    // GUI Labels
+    JLabel lblTurnBox;
+    JLabel lblHint;
+    JLabel lblHintNumber; // NEW: number box
+    JLabel lblRedCount;
+    JLabel lblBlueCount;
+    JLabel lblTimer;
+
+    ArrayList<String> wordPool = new ArrayList<>();
+
+    // Online
+    SuperSocketMaster ssm;
+    boolean isServer = false;
+    String serverIP = "";
+    JTextField chatField = new JTextField();
+
+    // Overlay
+    boolean overlayOn = true;
+
+    // Timer
+    javax.swing.Timer turnTimer;
+    int timeLeft = 60;
+
+    boolean gameStarted = false;
+
+    // ======================
+    // HELPER METHODS (LABELS)
+    // ======================
+    String actorLabel() {
+        return myTeam + " " + (myRole.equals("SPYMASTER") ? "Spymaster" : "Operative");
+    }
+
+    String operativeLabel() {
+        return currentTurn + " Operative";
+    }
+
+    String spymasterLabel() {
+        return currentTurn + " Spymaster";
+    }
+
     @Override
     public void actionPerformed(ActionEvent evt) {
 
-        // SOCKET — received network message
-        if (evt.getSource() == ssm) {
-            String msg = ssm.readText();
-            gameLog.append(msg + "\n");
+        if (evt.getSource() == btnToggleOverlay) {
+            overlayOn = !overlayOn;
+            updateBoardColors();
+            boardPanel.repaint();
+            return;
+        }
 
-            if (msg.startsWith("CLICK")) {
-                String[] parts = msg.split(",");
-                int r = Integer.parseInt(parts[1]);
-                int c = Integer.parseInt(parts[2]);
+        if (!gameStarted) return;
 
-                wordButtons[r][c].setBackground(new Color(220, 210, 180));
-                wordButtons[r][c].setEnabled(false);
+        if (evt.getSource() == btnEndTurn) {
+            endTurn();
+            return;
+        }
+
+        if (evt.getSource() == btnGiveClue) {
+            if (myRole.equals("SPYMASTER") && myTeam.equals(currentTurn)) {
+                giveClue();
+            } else {
+                JOptionPane.showMessageDialog(theFrame, "Only the spymaster of the current team can give clues.");
             }
             return;
         }
 
-        // SOCKET — server button
-        if (evt.getSource() == btnServer) {
-            ssm = new SuperSocketMaster(1337, this);
-            ssm.connect();
-            gameLog.append("Server started\n");
-            return;
-        }
+        if (!myRole.equals("OPERATIVE") || !myTeam.equals(currentTurn)) return;
 
-        // SOCKET — client button
-        if (evt.getSource() == btnClient) {
-            String ip = JOptionPane.showInputDialog("Enter server IP:");
-            ssm = new SuperSocketMaster(ip, 1337, this);
-            ssm.connect();
-            gameLog.append("Connected to server\n");
-            return;
-        }
+        for (int r = 0; r < 5; r++) {
+            for (int c = 0; c < 5; c++) {
+                if (evt.getSource() == wordButtons[r][c] && !revealed[r][c]) {
+                    revealed[r][c] = true;
+                    revealColor(r, c);
+                    wordButtons[r][c].setEnabled(false);
 
-        // ORIGINAL BUTTON LOGIC (unchanged)
-        for (int intRow = 0; intRow < intROWS; intRow++) {
-            for (int intCol = 0; intCol < intCOLS; intCol++) {
-                if (evt.getSource() == wordButtons[intRow][intCol]) {
+                    sendNetwork("CLICK:" + r + ":" + c);
 
-                    int intBoxNumber = (intRow * intCOLS) + intCol + 1;
-                    System.out.println(
-                        "Clicked box #" + intBoxNumber +
-                        " (row " + (intRow + 1) + ", col " + (intCol + 1) + ")"
-                    );
+                    // LOG LOCAL CLICK
+                    log(actorLabel() + " taps " + words[r][c]);
 
-                    wordButtons[intRow][intCol].setBackground(new Color(220, 210, 180));
-                    wordButtons[intRow][intCol].setEnabled(false);
+                    if (colors[r][c].equals("BLACK")) {
+                        log("ASSASSIN! " + (currentTurn.equals("RED") ? "BLUE" : "RED") + " wins!");
+                        JOptionPane.showMessageDialog(theFrame,
+                                "ASSASSIN! " + (currentTurn.equals("RED") ? "BLUE" : "RED") + " wins!");
+                        System.exit(0);
+                    }
+                    if (colors[r][c].equals("RED")) redLeft--;
+                    if (colors[r][c].equals("BLUE")) blueLeft--;
 
-                    // SOCKET — send click
-                    if (ssm != null) {
-                        ssm.sendText("CLICK," + intRow + "," + intCol);
+                    lblRedCount.setText(String.valueOf(redLeft));
+                    lblBlueCount.setText(String.valueOf(blueLeft));
+
+                    String strWinner="";
+                    if (redLeft == 0 || blueLeft == 0) {
+                        if(redLeft == 0){
+                            strWinner = ("RED TEAM WINS!");
+                            log(strWinner);
+                        }else if(blueLeft == 0){
+                            strWinner = ("BLUE TEAM WINS!");
+                        }
+                        JOptionPane.showMessageDialog(theFrame, strWinner);
+                        System.exit(0);
+                    }
+
+                    if (!colors[r][c].equals(currentTurn)) {
+                        endTurn();
                     }
                 }
             }
         }
     }
 
-    // Constructor
-    public testdoc(String strTitle) {
+    public testdoc(String title) {
+        setupGUI();
+    }
 
-        this.theFrame = new JFrame(strTitle);
-        this.theFrame.setLayout(new BorderLayout());
+    void startTimer() {
+        if (lblTimer == null) return;
 
-        this.mainPanel = new JPanel(new BorderLayout());
-        this.mainPanel.setBackground(new Color(210, 180, 140));
-        this.theFrame.setContentPane(this.mainPanel);
+        javax.swing.Timer t = new javax.swing.Timer(1000, e -> {
+            timeLeft--;
+            lblTimer.setText("Time left: " + timeLeft);
+            if (timeLeft <= 0) {
+                ((javax.swing.Timer) e.getSource()).stop();
+                endTurn();
+            }
+        });
+        if (turnTimer != null) turnTimer.stop();
+        turnTimer = t;
+        timeLeft = 60;
+        lblTimer.setText("Time left: " + timeLeft);
+        turnTimer.start();
+    }
 
-        this.topPanel = new JPanel();
-        this.topPanel.setPreferredSize(new Dimension(1280, 60));
-        this.topPanel.setBackground(new Color(210, 180, 140));
-        this.topPanel.add(new JLabel("Give your operatives a clue."));
-        this.mainPanel.add(this.topPanel, BorderLayout.NORTH);
+    // ======================
+    // END TURN
+    // ======================
+    void endTurn() {
+        log(operativeLabel() + " ends guessing");
 
-        // SOCKET — server / client buttons
-        btnServer = new JButton("Host Game");
-        btnClient = new JButton("Join Game");
-        btnServer.addActionListener(this);
-        btnClient.addActionListener(this);
-        this.topPanel.add(btnServer);
-        this.topPanel.add(btnClient);
+        currentTurn = currentTurn.equals("RED") ? "BLUE" : "RED";
+        lblTurnBox.setText(currentTurn + "'s turn");
+        lblHint.setText("Waiting for clue...");
+        lblHintNumber.setText("");
+        timeLeft = 60;
 
-        this.bottomPanel = new JPanel();
-        this.bottomPanel.setPreferredSize(new Dimension(1280, 40));
-        this.bottomPanel.setBackground(new Color(210, 180, 140));
-        this.mainPanel.add(this.bottomPanel, BorderLayout.SOUTH);
+        sendNetwork("ENDTURN:" + currentTurn);
 
-        this.boardPanel = new JPanel(new GridLayout(intROWS, intCOLS, 15, 15));
-        this.boardPanel.setBackground(new Color(139, 90, 43));
+        log(currentTurn + " team's turn begins");
+    }
 
-        this.wordButtons = new JButton[intROWS][intCOLS];
-        for (int intRow = 0; intRow < intROWS; intRow++) {
-            for (int intCol = 0; intCol < intCOLS; intCol++) {
-                this.wordButtons[intRow][intCol] = new JButton("WORD");
-                this.wordButtons[intRow][intCol].setFont(new Font("Arial", Font.BOLD, 18));
-                this.wordButtons[intRow][intCol].setBackground(new Color(245, 235, 200));
-                this.wordButtons[intRow][intCol].setFocusPainted(false);
-                this.wordButtons[intRow][intCol].addActionListener(this);
-                this.boardPanel.add(this.wordButtons[intRow][intCol]);
+    // ======================
+    // GIVE CLUE
+    // ======================
+    void giveClue() {
+        String clue = JOptionPane.showInputDialog("Enter clue + number (e.g. Animal 2)");
+        if (clue != null && !clue.isEmpty()) {
+            String word = clue;
+            String number = "";
+            if (clue.contains(" ")) {
+                int idx = clue.lastIndexOf(" ");
+                word = clue.substring(0, idx).trim();
+                number = clue.substring(idx + 1).trim();
+            }
+
+            lblHint.setText(word);
+            lblHintNumber.setText(number);
+
+            sendNetwork("CLUE:" + word + ":" + number);
+
+            log(spymasterLabel() + " gives clue " + word + " " + number);
+        }
+    }
+
+    void setupLobby() {
+        JDialog lobby = new JDialog(theFrame, "Lobby", true);
+        lobby.setLayout(new BorderLayout());
+
+        JPanel top = new JPanel();
+        top.add(new JLabel("Lobby - Choose role & team"));
+
+        JPanel hostPanel = new JPanel();
+        JRadioButton rbHost = new JRadioButton("Host");
+        JRadioButton rbJoin = new JRadioButton("Join");
+        ButtonGroup bg = new ButtonGroup();
+        bg.add(rbHost);
+        bg.add(rbJoin);
+        rbHost.setSelected(true);
+
+        JTextField ipInput = new JTextField("127.0.0.1", 10);
+
+        hostPanel.add(rbHost);
+        hostPanel.add(rbJoin);
+        hostPanel.add(new JLabel("IP:"));
+        hostPanel.add(ipInput);
+
+        top.add(hostPanel);
+
+        DefaultListModel<String> listModel = new DefaultListModel<>();
+        JList<String> lobbyList = new JList<>(listModel);
+        lobbyList.setPreferredSize(new Dimension(250, 200));
+
+        listModel.addElement("Red Operative");
+        listModel.addElement("Red Spymaster");
+        listModel.addElement("Blue Operative");
+        listModel.addElement("Blue Spymaster");
+
+        JButton btnStart = new JButton("Start Game");
+        btnStart.addActionListener(e -> {
+            if (lobbyList.getSelectedValue() == null) return;
+
+            isServer = rbHost.isSelected();
+            serverIP = ipInput.getText().trim();
+
+            String sel = lobbyList.getSelectedValue();
+            myTeam = sel.contains("Red") ? "RED" : "BLUE";
+            myRole = sel.contains("Spymaster") ? "SPYMASTER" : "OPERATIVE";
+
+            lobby.dispose();
+
+            setupSocket();
+
+            if (isServer) {
+                loadWords();
+                setupBoard();
+                sendBoardToClient();
+                startGame();
+            }
+
+            if (myRole.equals("SPYMASTER")) {
+                updateBoardColors();
+            }
+        });
+
+        lobby.add(top, BorderLayout.NORTH);
+        lobby.add(new JScrollPane(lobbyList), BorderLayout.CENTER);
+        lobby.add(btnStart, BorderLayout.SOUTH);
+
+        lobby.setSize(450, 350);
+        lobby.setLocationRelativeTo(theFrame);
+        lobby.setVisible(true);
+    }
+
+    void startGame() {
+        setupBoardUI();
+        updateBoardColors();
+        startTimer();
+        gameStarted = true;
+        sendNetwork("START:" + myTeam + ":" + myRole);
+    }
+
+    void loadWords() {
+        wordPool.clear();
+        try {
+            Scanner sc = new Scanner(new File("wordlist.txt"));
+            while (sc.hasNextLine()) wordPool.add(sc.nextLine().trim());
+            sc.close();
+            Collections.shuffle(wordPool);
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(null, "wordlist.txt missing");
+            System.exit(0);
+        }
+    }
+
+    void setupBoard() {
+        int i = 0;
+        for (int r = 0; r < 5; r++)
+            for (int c = 0; c < 5; c++)
+                words[r][c] = wordPool.get(i++);
+
+        ArrayList<String> bag = new ArrayList<>();
+        for (int x = 0; x < 9; x++) bag.add("RED");
+        for (int x = 0; x < 8; x++) bag.add("BLUE");
+        for (int x = 0; x < 7; x++) bag.add("NEUTRAL");
+        bag.add("BLACK");
+
+        do {
+            Collections.shuffle(bag);
+        } while (bag.indexOf("BLACK") < 6);
+
+        i = 0;
+        for (int r = 0; r < 5; r++)
+            for (int c = 0; c < 5; c++)
+                colors[r][c] = bag.get(i++);
+    }
+
+    void setupGUI() {
+        theFrame = new JFrame("Codenames");
+        theFrame.setLayout(new BorderLayout());
+
+        mainPanel = new JPanel(new BorderLayout());
+        mainPanel.setBackground(new Color(210, 180, 140));
+        theFrame.setContentPane(mainPanel);
+
+        // LEFT PANEL
+        leftPanel = new JPanel(new BorderLayout());
+        leftPanel.setPreferredSize(new Dimension(200, 620));
+        leftPanel.setBackground(new Color(210, 180, 140));
+
+        JPanel pnlRedTeam = new JPanel(new BorderLayout());
+        pnlRedTeam.setBackground(new Color(170, 60, 50));
+        pnlRedTeam.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
+
+        lblRedCount = new JLabel(String.valueOf(redLeft));
+        lblRedCount.setFont(new Font("Arial", Font.BOLD, 48));
+        lblRedCount.setForeground(Color.WHITE);
+
+        JPanel pnlRedText = new JPanel();
+        pnlRedText.setBackground(new Color(170, 60, 50));
+        pnlRedText.setLayout(new BoxLayout(pnlRedText, BoxLayout.Y_AXIS));
+
+        pnlRedText.add(new JLabel("Operative(s)"));
+        pnlRedText.add(new JLabel("-"));
+        pnlRedText.add(Box.createVerticalStrut(10));
+        pnlRedText.add(new JLabel("Spymaster(s)"));
+        pnlRedText.add(new JLabel("-"));
+        for (Component c : pnlRedText.getComponents()) c.setForeground(Color.WHITE);
+
+        pnlRedTeam.add(pnlRedText, BorderLayout.WEST);
+        pnlRedTeam.add(lblRedCount, BorderLayout.EAST);
+
+        leftPanel.add(pnlRedTeam, BorderLayout.NORTH);
+        mainPanel.add(leftPanel, BorderLayout.WEST);
+
+        // RIGHT PANEL
+        rightPanel = new JPanel(new BorderLayout());
+        rightPanel.setPreferredSize(new Dimension(200, 620));
+        rightPanel.setBackground(new Color(210, 180, 140));
+
+        JPanel pnlBlueTeam = new JPanel(new BorderLayout());
+        pnlBlueTeam.setBackground(new Color(60, 130, 160));
+        pnlBlueTeam.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
+
+        lblBlueCount = new JLabel(String.valueOf(blueLeft));
+        lblBlueCount.setFont(new Font("Arial", Font.BOLD, 48));
+        lblBlueCount.setForeground(Color.WHITE);
+
+        JPanel pnlBlueText = new JPanel();
+        pnlBlueText.setBackground(new Color(60, 130, 160));
+        pnlBlueText.setLayout(new BoxLayout(pnlBlueText, BoxLayout.Y_AXIS));
+
+        pnlBlueText.add(new JLabel("Operative(s)"));
+        pnlBlueText.add(new JLabel("-"));
+        pnlBlueText.add(Box.createVerticalStrut(10));
+        pnlBlueText.add(new JLabel("Spymaster(s)"));
+        pnlBlueText.add(new JLabel("-"));
+        for (Component c : pnlBlueText.getComponents()) c.setForeground(Color.WHITE);
+
+        pnlBlueTeam.add(lblBlueCount, BorderLayout.WEST);
+        pnlBlueTeam.add(pnlBlueText, BorderLayout.EAST);
+
+        rightPanel.add(pnlBlueTeam, BorderLayout.NORTH);
+
+        gameLog = new JTextArea();
+        gameLog.setEditable(false);
+        JScrollPane logScroll = new JScrollPane(gameLog);
+        rightPanel.add(logScroll, BorderLayout.CENTER);
+        
+        JPanel chatPanel = new JPanel();
+        chatPanel.setLayout(new BoxLayout(chatPanel, BoxLayout.Y_AXIS));
+        chatPanel.setBackground(new Color(210, 180, 140));
+
+
+        // Chat input field
+        chatField = new JTextField();
+        chatField.setPreferredSize(new Dimension(180, 30));
+        chatField.setMaximumSize(new Dimension(Integer.MAX_VALUE, 30));
+        chatField.addActionListener(e -> {
+            String text = chatField.getText().trim();
+            if (!text.isEmpty()) {
+                log("You: " + text);
+                sendNetwork("CHAT:" + text);
+                chatField.setText("");
+            }
+        });
+
+        chatPanel.add(chatField);
+        rightPanel.add(chatPanel, BorderLayout.SOUTH);
+
+        mainPanel.add(rightPanel, BorderLayout.EAST);
+
+        // BOTTOM PANEL
+        bottomPanel = new JPanel();
+        btnEndTurn = new JButton("End Turn");
+        btnEndTurn.addActionListener(this);
+        bottomPanel.add(btnEndTurn);
+
+        btnToggleOverlay = new JButton("Toggle Overlay");
+        btnToggleOverlay.addActionListener(this);
+        bottomPanel.add(btnToggleOverlay);
+
+        btnGiveClue = new JButton("Give Clue");
+        btnGiveClue.addActionListener(this);
+        bottomPanel.add(btnGiveClue);
+
+        mainPanel.add(bottomPanel, BorderLayout.SOUTH);
+
+        // CENTER BOARD PANEL
+        JPanel centerPanel = new JPanel();
+        centerPanel.setLayout(new BoxLayout(centerPanel, BoxLayout.Y_AXIS));
+        centerPanel.setBackground(new Color(210, 180, 140));
+
+        // Turn Box
+        JPanel pnlTurnBox = new JPanel();
+        pnlTurnBox.setPreferredSize(new Dimension(880, 45));
+        pnlTurnBox.setMaximumSize(new Dimension(880, 45));
+        pnlTurnBox.setBackground(Color.WHITE);
+        pnlTurnBox.setBorder(BorderFactory.createLineBorder(Color.BLACK));
+        lblTurnBox = new JLabel(currentTurn + "'s turn", SwingConstants.CENTER);
+        lblTurnBox.setFont(new Font("Arial", Font.BOLD, 18));
+        pnlTurnBox.add(lblTurnBox);
+        centerPanel.add(pnlTurnBox);
+        centerPanel.add(Box.createVerticalStrut(10));
+
+        // Board Grid
+        boardPanel = new JPanel(new GridLayout(5, 5, 15, 15));
+        boardPanel.setBackground(new Color(139, 90, 43));
+        wordButtons = new JButton[5][5];
+        for (int r = 0; r < 5; r++)
+            for (int c = 0; c < 5; c++) {
+                wordButtons[r][c] = new JButton("WORD");
+                wordButtons[r][c].setFont(new Font("Arial", Font.BOLD, 18));
+                wordButtons[r][c].setBackground(new Color(245, 235, 200));
+                wordButtons[r][c].setFocusPainted(false);
+                wordButtons[r][c].setOpaque(true);
+                wordButtons[r][c].setBorderPainted(false);
+                wordButtons[r][c].addActionListener(this);
+                boardPanel.add(wordButtons[r][c]);
+            }
+        centerPanel.add(boardPanel);
+        centerPanel.add(Box.createVerticalStrut(10));
+
+        // Hint row
+        JPanel pnlHintRow = new JPanel();
+        pnlHintRow.setLayout(new BoxLayout(pnlHintRow, BoxLayout.X_AXIS));
+        pnlHintRow.setBackground(new Color(210, 180, 140));
+        pnlHintRow.setPreferredSize(new Dimension(880, 45));
+        pnlHintRow.setMaximumSize(new Dimension(880, 45));
+
+        JPanel pnlHintBox = new JPanel();
+        pnlHintBox.setPreferredSize(new Dimension(700, 45));
+        pnlHintBox.setMaximumSize(new Dimension(700, 45));
+        pnlHintBox.setBackground(Color.WHITE);
+        pnlHintBox.setBorder(BorderFactory.createLineBorder(Color.BLACK));
+
+        lblHint = new JLabel("Waiting for clue...", SwingConstants.CENTER);
+        lblHint.setFont(new Font("Arial", Font.BOLD, 16));
+        pnlHintBox.add(lblHint);
+
+        JPanel pnlHintNumber = new JPanel();
+        pnlHintNumber.setPreferredSize(new Dimension(45, 45));
+        pnlHintNumber.setMaximumSize(new Dimension(45, 45));
+        pnlHintNumber.setBackground(Color.WHITE);
+        pnlHintNumber.setBorder(BorderFactory.createLineBorder(Color.BLACK));
+
+        lblHintNumber = new JLabel("", SwingConstants.CENTER);
+        lblHintNumber.setFont(new Font("Arial", Font.BOLD, 16));
+        pnlHintNumber.add(lblHintNumber);
+
+        pnlHintRow.add(Box.createHorizontalGlue());
+        pnlHintRow.add(pnlHintBox);
+        pnlHintRow.add(Box.createHorizontalStrut(10));
+        pnlHintRow.add(pnlHintNumber);
+        pnlHintRow.add(Box.createHorizontalGlue());
+
+        centerPanel.add(pnlHintRow);
+
+        mainPanel.add(centerPanel, BorderLayout.CENTER);
+
+        theFrame.setSize(1280, 720);
+        theFrame.setResizable(false);
+        theFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        theFrame.setLocationRelativeTo(null);
+        theFrame.setVisible(true);
+
+        setupLobby();
+    }
+
+    void setupBoardUI() {
+        for (int r = 0; r < 5; r++)
+            for (int c = 0; c < 5; c++)
+                wordButtons[r][c].setText(words[r][c]);
+
+        updateBoardColors();
+    }
+
+    void updateBoardColors() {
+        for (int r = 0; r < 5; r++) {
+            for (int c = 0; c < 5; c++) {
+                JButton b = wordButtons[r][c];
+                if (revealed[r][c]) {
+                    revealColor(r, c, b);
+                } else if (myRole.equals("SPYMASTER") && overlayOn) {
+                    revealColor(r, c, b);
+                } else {
+                    b.setBackground(new Color(245, 235, 200));
+                }
+            }
+        }
+    }
+
+    void revealColor(int r, int c) {
+        revealColor(r, c, wordButtons[r][c]);
+    }
+
+    void revealColor(int r, int c, JButton b) {
+        switch (colors[r][c]) {
+            case "RED":
+                b.setBackground(new Color(170, 60, 50));
+                b.setForeground(Color.WHITE);
+                break;
+            case "BLUE":
+                b.setBackground(new Color(60, 130, 160));
+                b.setForeground(Color.WHITE);
+                break;
+            case "BLACK":
+                b.setBackground(new Color(90, 90, 90));
+                b.setForeground(Color.WHITE);
+                break;
+            default:
+                b.setBackground(new Color(200, 190, 170));
+                b.setForeground(Color.BLACK);
+        }
+    }
+
+    void setupSocket() {
+        if (isServer) {
+            ssm = new SuperSocketMaster(1337, evt -> handleNetwork());
+            log("Server started on port 1337");
+        } else {
+            ssm = new SuperSocketMaster(serverIP, 1337, evt -> handleNetwork());
+            if (ssm.connect()){
+                log("Connected to server: " + serverIP);
+            }else{
+                log("Failed to connect to server");
+            }
+        }
+    }
+
+    void sendBoardToClient() {
+        StringBuilder w = new StringBuilder();
+        StringBuilder c = new StringBuilder();
+
+        for (int r = 0; r < 5; r++)
+            for (int col = 0; col < 5; col++) {
+                w.append(words[r][col]);
+                c.append(colors[r][col]);
+                if (!(r == 4 && col == 4)) {
+                    w.append(",");
+                    c.append(",");
+                }
+            }
+
+        sendNetwork("BOARD:" + w.toString() + "|" + c.toString());
+    }
+
+    void handleNetwork() {
+        String msg = ssm.readText();
+        if (msg == null) return;
+
+        log("Network: " + msg);
+
+        if (msg.startsWith("BOARD:")) {
+            String[] parts = msg.substring(6).split("\\|");
+            String[] w = parts[0].split(",");
+            String[] c = parts[1].split(",");
+
+            int idx = 0;
+            for (int r = 0; r < 5; r++)
+                for (int col = 0; col < 5; col++) {
+                    words[r][col] = w[idx];
+                    colors[r][col] = c[idx];
+                    idx++;
+                }
+
+            setupBoardUI();
+            gameStarted = true;
+
+            if (myRole.equals("SPYMASTER")) {
+                updateBoardColors();
             }
         }
 
-        JPanel centerContainer = new JPanel();
-        centerContainer.setLayout(new BoxLayout(centerContainer, BoxLayout.X_AXIS));
-        centerContainer.setBackground(new Color(210, 180, 140));
+        if (msg.startsWith("CLICK:")) {
+            String[] p = msg.split(":");
+            int r = Integer.parseInt(p[1]);
+            int c = Integer.parseInt(p[2]);
+            if (!revealed[r][c]) {
+                revealed[r][c] = true;
+                wordButtons[r][c].setEnabled(false);
+                revealColor(r, c);
 
-        this.leftPanel = new JPanel();
-        this.leftPanel.setPreferredSize(new Dimension(200, 620));
-        this.leftPanel.setBackground(new Color(210, 180, 140));
-        centerContainer.add(this.leftPanel);
+                if (colors[r][c].equals("RED")) redLeft--;
+                if (colors[r][c].equals("BLUE")) blueLeft--;
 
-        this.boardPanel.setPreferredSize(new Dimension(880, 620));
-        centerContainer.add(this.boardPanel);
+                lblRedCount.setText(String.valueOf(redLeft));
+                lblBlueCount.setText(String.valueOf(blueLeft));
 
-        this.rightPanel = new JPanel(new BorderLayout());
-        this.rightPanel.setPreferredSize(new Dimension(200, 620));
-        this.rightPanel.setBackground(new Color(210, 180, 140));
+                // LOG REMOTE CLICK
+                log(operativeLabel() + " taps " + words[r][c]);
+            }
+        }
 
-        // SOCKET — game log
-        gameLog = new JTextArea();
-        gameLog.setEditable(false);
-        JScrollPane scroll = new JScrollPane(gameLog);
-        scroll.setBorder(BorderFactory.createTitledBorder("Game log"));
-        this.rightPanel.add(scroll, BorderLayout.CENTER);
+        if (msg.startsWith("ENDTURN:")) {
+            currentTurn = msg.split(":")[1];
+            lblTurnBox.setText(currentTurn + "'s turn");
+            lblHint.setText("Waiting for clue...");
+            lblHintNumber.setText("");
+            timeLeft = 60;
 
-        centerContainer.add(this.rightPanel);
-        this.mainPanel.add(centerContainer, BorderLayout.CENTER);
+            log(currentTurn + " team's turn begins");
+        }
 
-        this.theFrame.setSize(1280, 720);
-        this.theFrame.setResizable(false);
-        this.theFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        this.theFrame.setLocationRelativeTo(null);
-        this.theFrame.setVisible(true);
+        if (msg.startsWith("CLUE:")) {
+            String[] parts = msg.split(":");
+            if (parts.length == 3) {
+                String word = parts[1];
+                String number = parts[2];
+                lblHint.setText(word);
+                lblHintNumber.setText(number);
+
+                log(spymasterLabel() + " gives clue " + word + " " + number);
+            }
+        }
+
+        if (msg.startsWith("CHAT:")) {
+            log("Opponent: " + msg.substring(5));
+        }
+
+        if (msg.startsWith("START:")) {
+            String[] parts = msg.split(":");
+            myTeam = parts[1];
+            myRole = parts[2];
+            log("Assigned: " + myTeam + " " + myRole);
+
+            if (myRole.equals("SPYMASTER")) {
+                updateBoardColors();
+            }
+        }
+    }
+
+    void sendNetwork(String msg) {
+        if (ssm != null) ssm.sendText(msg);
+    }
+
+    void log(String msg) {
+        if (gameLog != null) gameLog.append(msg + "\n");
     }
 
     public static void main(String[] args) {
-        new testdoc("Codenames");
+        SwingUtilities.invokeLater(() -> new testdoc("Codenames"));
     }
 }
+
+
