@@ -64,15 +64,15 @@ public class MainCodenamesGame implements ActionListener {
     int intDisplayedRed = intRedLeft;  
     int intDisplayedBlue = intBlueLeft; 
 
-    javax.swing.Timer animationTimer; // 60 FPS animation
+    // 60 FPS animation
+    javax.swing.Timer animationTimer; 
 
-    final int intFPS = 60; // 60 frames per second
-    final int intAnimDuration = 300; // duration in ms for color transitions
-    final float fltColorStep = 1.0f / ((intAnimDuration / 1000f) * intFPS); // fraction per frame
+    final int intFPS = 60;
+    final int intAnimDuration = 300; 
+    final float fltColorStep = 1.0f / ((intAnimDuration / 1000f) * intFPS);
 
-    // ======================
-    // HELPER METHODS (LABELS)
-    // ======================
+    // Character/Player labels
+
     String getActorLabel() {
         return strMyTeam + " " + (strMyRole.equals("SPYMASTER") ? "Spymaster" : "Operative");
     }
@@ -123,7 +123,7 @@ public class MainCodenamesGame implements ActionListener {
                     btnWord[intRow][intCol].setEnabled(false);
                     sendNetwork("CLICK:" + intRow + ":" + intCol);
 
-                    // LOG LOCAL CLICK
+                    // Log Local Click
                     log(getActorLabel() + " taps " + strWords[intRow][intCol]);
 
                     if (strColors[intRow][intCol].equals("BLACK")) {
@@ -153,9 +153,10 @@ public class MainCodenamesGame implements ActionListener {
         }
     }
 
+     // start animation timer for buttons and scores
     public MainCodenamesGame(String strTitle) {
         setupGUI();
-        setupAnimationTimer(); // start animation timer for buttons and scores
+        setupAnimationTimer();
     }
 
     void startTimer() {
@@ -176,9 +177,8 @@ public class MainCodenamesGame implements ActionListener {
         turnTimer.start();
     }
 
-    // ======================
-    // END TURN
-    // ======================
+    // End of Turn
+
     void endTurn() {
         log(getOperativeLabel() + " ends guessing");
 
@@ -195,9 +195,8 @@ public class MainCodenamesGame implements ActionListener {
         updateTargetColors();
     }
 
-    // ======================
-    // GIVE CLUE
-    // ======================
+    // Spymaster Gives Clue
+
     void giveClue() {
         String strClue = JOptionPane.showInputDialog("Enter clue + number (e.g. Animal 2)");
         if (strClue != null && !strClue.isEmpty()) {
@@ -209,7 +208,7 @@ public class MainCodenamesGame implements ActionListener {
                 strNumber = strClue.substring(intIdx + 1).trim();
             }
 
-            // ===== NEW VALIDATION =====
+            // Clue Check (GAME REQUIREMENT)
             for (int intRow = 0; intRow < 5; intRow++) {
                 for (int intCol = 0; intCol < 5; intCol++) {
                     if (strWords[intRow][intCol].equalsIgnoreCase(strWord)) {
@@ -219,7 +218,7 @@ public class MainCodenamesGame implements ActionListener {
                     }
                 }
             }
-            // ===== END VALIDATION =====
+            
 
             lblHint.setText(strWord);
             lblHintNumber.setText(strNumber);
@@ -350,7 +349,7 @@ public class MainCodenamesGame implements ActionListener {
         mainPanel.setBackground(new Color(210, 180, 140));
         theFrame.setContentPane(mainPanel);
 
-        // LEFT PANEL
+        // Left Panel
         leftPanel = new JPanel(new BorderLayout());
         leftPanel.setPreferredSize(new Dimension(200, 620));
         leftPanel.setBackground(new Color(210, 180, 140));
@@ -380,7 +379,7 @@ public class MainCodenamesGame implements ActionListener {
         leftPanel.add(pnlRedTeam, BorderLayout.NORTH);
         mainPanel.add(leftPanel, BorderLayout.WEST);
 
-        // RIGHT PANEL
+        // Right Panel
         rightPanel = new JPanel(new BorderLayout());
         rightPanel.setPreferredSize(new Dimension(200, 620));
         rightPanel.setBackground(new Color(210, 180, 140));
@@ -435,7 +434,7 @@ public class MainCodenamesGame implements ActionListener {
 
         mainPanel.add(rightPanel, BorderLayout.EAST);
 
-        // BOTTOM PANEL
+        // Bottom Panel
         bottomPanel = new JPanel();
         btnEndTurn = new JButton("End Turn");
         btnEndTurn.addActionListener(this);
@@ -451,7 +450,7 @@ public class MainCodenamesGame implements ActionListener {
 
         mainPanel.add(bottomPanel, BorderLayout.SOUTH);
 
-        // CENTER BOARD PANEL
+        // Center Board Panel
         JPanel pnlCenter = new JPanel();
         pnlCenter.setLayout(new BoxLayout(pnlCenter, BoxLayout.Y_AXIS));
         pnlCenter.setBackground(new Color(210, 180, 140));
@@ -545,7 +544,7 @@ public class MainCodenamesGame implements ActionListener {
         updateTargetColors();
     }
 
-    // animation timer
+    // Animation timer
     void setupAnimationTimer() {
         animationTimer = new javax.swing.Timer(1000 / intFPS, e -> updateAnimations());
         animationTimer.start();
@@ -620,10 +619,10 @@ public class MainCodenamesGame implements ActionListener {
     }
 
     void animateScores() {
-        // score animation handled in updateAnimations
+
     }
 
-    // networking and log
+    // Networking and log
     void setupSocket() {
         if (blnIsServer) {
             ssm = new SuperSocketMaster(1337, evt -> handleNetwork());
@@ -636,7 +635,7 @@ public class MainCodenamesGame implements ActionListener {
         } else {
             ssm = new SuperSocketMaster(strServerIP, 1337, evt -> handleNetwork());
             boolean blnConnected = false;
-            for (int i = 0; i < 10; i++) {
+            for (int intCount4 = 0; intCount4 < 10; intCount4++) {
                 if (ssm.connect()) {
                     blnConnected = true;
                     break;
