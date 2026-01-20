@@ -1,10 +1,10 @@
-package MainProgram;
+
 
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
 
-public class codenames implements ActionListener {
+public class testcodenames1 implements ActionListener {
 
     // Properties
     public JFrame theFrame;
@@ -45,7 +45,7 @@ public class codenames implements ActionListener {
     }
 
     // Constructor
-    public codenames(String strTitle) {
+    public testcodenames1(String strTitle) {
 
         // Frame
         this.theFrame = new JFrame(strTitle);
@@ -230,6 +230,6 @@ public class codenames implements ActionListener {
 
     // Main Method
     public static void main(String[] args) {
-        new codenames("Codenames");
+        new testcodenames1("Codenames");
     }
 }

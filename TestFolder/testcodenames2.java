@@ -1,4 +1,4 @@
-package MainProgram;
+
 
 import javax.swing.*;
 import java.awt.*;
@@ -8,7 +8,7 @@ import java.util.*;
 import sockets.SuperSocketMaster;
 
 
-public class codenames2 implements ActionListener {
+public class testcodenames2 implements ActionListener {
 
 
     JFrame theFrame;
@@ -140,7 +140,7 @@ public class codenames2 implements ActionListener {
     }
 
 
-    public codenames2(String title) {
+    public testcodenames2(String title) {
         setupGUI();
     }
 
@@ -592,7 +592,7 @@ public class codenames2 implements ActionListener {
 
 
     public static void main(String[] args) {
-        SwingUtilities.invokeLater(() -> new codenames2("Codenames"));
+        SwingUtilities.invokeLater(() -> new testcodenames2("Codenames"));
     }
 }
 
