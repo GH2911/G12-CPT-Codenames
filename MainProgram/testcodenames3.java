@@ -34,6 +34,7 @@ public class testcodenames3 implements ActionListener {
     // GUI Labels
     JLabel lblTurnBox;
     JLabel lblHint;
+    JLabel lblHintNumber; // NEW: number box
     JLabel lblRedCount;
     JLabel lblBlueCount;
     JLabel lblTimer;
@@ -54,6 +55,21 @@ public class testcodenames3 implements ActionListener {
 
     boolean gameStarted = false;
 
+    // ======================
+    // HELPER METHODS (LABELS)
+    // ======================
+    String actorLabel() {
+        return myTeam + " " + (myRole.equals("SPYMASTER") ? "Spymaster" : "Operative");
+    }
+
+    String operativeLabel() {
+        return currentTurn + " Operative";
+    }
+
+    String spymasterLabel() {
+        return currentTurn + " Spymaster";
+    }
+
     @Override
     public void actionPerformed(ActionEvent evt) {
 
@@ -70,12 +86,7 @@ public class testcodenames3 implements ActionListener {
             endTurn();
             return;
         }
-        if (evt.getSource() == btnToggleOverlay) {
-            overlayOn = !overlayOn;
-            updateBoardColors();
-            boardPanel.repaint();
-            return;
-        }
+
         if (evt.getSource() == btnGiveClue) {
             if (myRole.equals("SPYMASTER") && myTeam.equals(currentTurn)) {
                 giveClue();
@@ -95,6 +106,9 @@ public class testcodenames3 implements ActionListener {
                     wordButtons[r][c].setEnabled(false);
 
                     sendNetwork("CLICK:" + r + ":" + c);
+
+                    // LOG LOCAL CLICK
+                    log(actorLabel() + " taps " + words[r][c]);
 
                     if (colors[r][c].equals("BLACK")) {
                         log("ASSASSIN! " + (currentTurn.equals("RED") ? "BLUE" : "RED") + " wins!");
@@ -145,21 +159,43 @@ public class testcodenames3 implements ActionListener {
         turnTimer.start();
     }
 
+    // ======================
+    // END TURN
+    // ======================
     void endTurn() {
+        log(operativeLabel() + " ends guessing");
+
         currentTurn = currentTurn.equals("RED") ? "BLUE" : "RED";
         lblTurnBox.setText(currentTurn + "'s turn");
         lblHint.setText("Waiting for clue...");
+        lblHintNumber.setText("");
         timeLeft = 60;
+
         sendNetwork("ENDTURN:" + currentTurn);
-        log("Turn ended. Now " + currentTurn + "'s turn.");
+
+        log(currentTurn + " team's turn begins");
     }
 
+    // ======================
+    // GIVE CLUE
+    // ======================
     void giveClue() {
         String clue = JOptionPane.showInputDialog("Enter clue + number (e.g. Animal 2)");
         if (clue != null && !clue.isEmpty()) {
-            lblHint.setText(clue);
-            sendNetwork("CLUE:" + clue);
-            log("Clue given: " + clue);
+            String word = clue;
+            String number = "";
+            if (clue.contains(" ")) {
+                int idx = clue.lastIndexOf(" ");
+                word = clue.substring(0, idx).trim();
+                number = clue.substring(idx + 1).trim();
+            }
+
+            lblHint.setText(word);
+            lblHintNumber.setText(number);
+
+            sendNetwork("CLUE:" + word + ":" + number);
+
+            log(spymasterLabel() + " gives clue " + word + " " + number);
         }
     }
 
@@ -218,7 +254,6 @@ public class testcodenames3 implements ActionListener {
                 startGame();
             }
 
-            // Immediately apply overlay if spymaster
             if (myRole.equals("SPYMASTER")) {
                 updateBoardColors();
             }
@@ -401,7 +436,7 @@ public class testcodenames3 implements ActionListener {
         centerPanel.add(boardPanel);
         centerPanel.add(Box.createVerticalStrut(10));
 
-        // Hint box
+        // Hint row
         JPanel pnlHintRow = new JPanel();
         pnlHintRow.setLayout(new BoxLayout(pnlHintRow, BoxLayout.X_AXIS));
         pnlHintRow.setBackground(new Color(210, 180, 140));
@@ -423,6 +458,10 @@ public class testcodenames3 implements ActionListener {
         pnlHintNumber.setMaximumSize(new Dimension(45, 45));
         pnlHintNumber.setBackground(Color.WHITE);
         pnlHintNumber.setBorder(BorderFactory.createLineBorder(Color.BLACK));
+
+        lblHintNumber = new JLabel("", SwingConstants.CENTER);
+        lblHintNumber.setFont(new Font("Arial", Font.BOLD, 16));
+        pnlHintNumber.add(lblHintNumber);
 
         pnlHintRow.add(Box.createHorizontalGlue());
         pnlHintRow.add(pnlHintBox);
@@ -484,7 +523,7 @@ public class testcodenames3 implements ActionListener {
                 b.setBackground(new Color(90, 90, 90));
                 b.setForeground(Color.WHITE);
                 break;
-            default: // NEUTRAL
+            default:
                 b.setBackground(new Color(200, 190, 170));
                 b.setForeground(Color.BLACK);
         }
@@ -509,7 +548,10 @@ public class testcodenames3 implements ActionListener {
             for (int col = 0; col < 5; col++) {
                 w.append(words[r][col]);
                 c.append(colors[r][col]);
-                if (!(r == 4 && col == 4)) { w.append(","); c.append(","); }
+                if (!(r == 4 && col == 4)) {
+                    w.append(",");
+                    c.append(",");
+                }
             }
 
         sendNetwork("BOARD:" + w.toString() + "|" + c.toString());
@@ -537,7 +579,6 @@ public class testcodenames3 implements ActionListener {
             setupBoardUI();
             gameStarted = true;
 
-            // Overlay for spymaster immediately
             if (myRole.equals("SPYMASTER")) {
                 updateBoardColors();
             }
@@ -557,6 +598,9 @@ public class testcodenames3 implements ActionListener {
 
                 lblRedCount.setText(String.valueOf(redLeft));
                 lblBlueCount.setText(String.valueOf(blueLeft));
+
+                // LOG REMOTE CLICK
+                log(operativeLabel() + " taps " + words[r][c]);
             }
         }
 
@@ -564,11 +608,22 @@ public class testcodenames3 implements ActionListener {
             currentTurn = msg.split(":")[1];
             lblTurnBox.setText(currentTurn + "'s turn");
             lblHint.setText("Waiting for clue...");
+            lblHintNumber.setText("");
             timeLeft = 60;
+
+            log(currentTurn + " team's turn begins");
         }
 
         if (msg.startsWith("CLUE:")) {
-            lblHint.setText(msg.substring(5));
+            String[] parts = msg.split(":");
+            if (parts.length == 3) {
+                String word = parts[1];
+                String number = parts[2];
+                lblHint.setText(word);
+                lblHintNumber.setText(number);
+
+                log(spymasterLabel() + " gives clue " + word + " " + number);
+            }
         }
 
         if (msg.startsWith("CHAT:")) {
@@ -581,7 +636,6 @@ public class testcodenames3 implements ActionListener {
             myRole = parts[2];
             log("Assigned: " + myTeam + " " + myRole);
 
-            // Immediately apply overlay if spymaster
             if (myRole.equals("SPYMASTER")) {
                 updateBoardColors();
             }
